@@ -7,7 +7,7 @@
 
 | 工具 | 输入 | 返回 |
 | --- | --- | --- |
-| `list_servers` | 无 | 配置的服务器名称、描述、状态、握手 title、工具/资源数量、错误，以及排序后的前 20 个工具名 |
+| `list_servers` | 无 | 配置的服务器名称、描述、状态、握手 title、工具/资源数量和错误 |
 | `search_tools` | `query` 或 `server`，可加 `limit`、`includeSchema`、`cursor` | `hits`、可选 `nextCursor` 和 `unmatched` |
 | `get_tool_details` | `server`、`tool` | 标识、对外名、描述、title、完整输入 schema、annotations |
 | `call_tool` | `server`、`tool`、可选 `args` | 上游原始结果，包括业务错误；`args` 不符合 schema 时在网关返回错误 |
@@ -27,8 +27,8 @@ resources。因此：
 
 - 四个工具的 description 各自自足，不依赖 instructions 或资源里说过的规则；
   模型可见的文本里统一只说「在/不在这个工具列表里」。
-- `list_servers` 每台服务器附带 `tools`（排序后最多 20 个名字），`toolCount`
-  是总数；一次调用就能知道每台服务器大致能做什么，不必再读资源。
+- `list_servers` 只报每台服务器的工具与资源数量，不报工具名：上百台服务器时
+  概览不能变成目录。一台服务器有什么，用 `search_tools(server)` 分页浏览。
 - 服务器断连时的错误带上记录的原因（如 `command not found`），模型能转述给
   能修的人。
 - `call_tool` 在转发前按该工具缓存的输入 schema 校验 `args`，缺 required 字段

@@ -139,7 +139,7 @@ mcphub 提供四个系统工具，按需发现上游能力。默认的 `tools/li
 
 | 工具 | 用途 |
 | --- | --- |
-| `list_servers` | 查看配置的服务器：描述、连接状态、工具数与前 20 个工具名 |
+| `list_servers` | 查看配置的服务器：描述、连接状态、工具与资源数量、失败原因 |
 | `search_tools` | 按关键词搜索，或指定服务器分页浏览；可同时取得完整输入 schema |
 | `get_tool_details` | 查看一个已知工具的完整输入 schema、title 与 annotations |
 | `call_tool` | 按 `server` + `tool` 调用上游，`args` 放业务参数；转发前按 schema 校验 |
@@ -191,8 +191,8 @@ required 字段、类型不对，会在网关这里以可读的错误返回，�
 schema 解析不了、schema 声明了校验器不支持的版本。
 
 这几件事简单的客户端未必看得到：`initialize.instructions`、资源。所以四个工具
-的 description 各自把规则说全，`list_servers` 直接带上工具名，不指望模型去读
-`hub://servers/{名字}`。
+的 description 各自把规则说全。`list_servers` 只报数量不报工具名，上百台服务器时
+概览不能变成目录；看一台服务器有什么，用 `search_tools(server="名字")`。
 
 资源 `hub://guide` 是本文；`hub://servers/{名字}` 返回服务器的状态、描述及全部
 工具的「名字 → 描述」映射。不需要参数 schema 时，一次读取就能了解一台服务器。

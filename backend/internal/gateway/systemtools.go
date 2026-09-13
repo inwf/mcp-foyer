@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -60,6 +59,10 @@ type OwnTools func() []*mcp.Tool
 type listServersInput struct{}
 
 // ServerSummary describes one configured server.
+//
+// It carries counts, not tool names: an installation of a hundred servers
+// would otherwise answer an overview with a directory. What one server
+// offers is a question for search_tools(server).
 type ServerSummary struct {
 	Name          string `json:"name"`
 	State         string `json:"state"`
@@ -68,19 +71,7 @@ type ServerSummary struct {
 	ToolCount     int    `json:"toolCount"`
 	ResourceCount int    `json:"resourceCount"`
 	Error         string `json:"error,omitempty"`
-
-	// Tools names the server's tools, sorted, up to maxListedTools of
-	// them. A count alone does not say what a server does, and an
-	// operator rarely writes a description; the names are what let a
-	// caller decide whether to search this server without first doing so.
-	Tools []string `json:"tools,omitempty"`
 }
-
-// maxListedTools bounds the names list_servers reports per server. A
-// server with a few dozen tools is fully named; a hundred servers of a
-// hundred tools each would otherwise turn an overview into a directory,
-// and toolCount already says when the list is a sample.
-const maxListedTools = 20
 
 type listServersOutput struct {
 	Servers []ServerSummary `json:"servers"`
@@ -151,8 +142,9 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 	mcp.AddTool(server, &mcp.Tool{
 		Name: ToolListServers,
 		Description: "Overview of the servers behind this gateway: each one's name, state, description, " +
-			"and the names of its tools (up to " + strconv.Itoa(maxListedTools) + "; toolCount gives the total). " +
-			"Start here when the servers are unknown; when the capability is known, search_tools finds it directly.",
+			"tool and resource counts, and the error when it is down. " +
+			"Start here when the servers are unknown; when the capability is known, search_tools finds it directly, " +
+			"and search_tools(server) lists what one server offers.",
 		Annotations: readOnly("List servers"),
 	}, func(_ context.Context, _ *mcp.CallToolRequest, _ listServersInput) (*mcp.CallToolResult, listServersOutput, error) {
 		return nil, listServers(ups, cfgs), nil
@@ -210,7 +202,6 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 func listServers(ups Upstreams, cfgs Configs) listServersOutput {
 	cfg := cfgs.Get()
 	statuses := ups.Statuses()
-	tools := ups.Tools()
 	out := listServersOutput{Servers: make([]ServerSummary, 0, len(statuses))}
 	for _, status := range statuses {
 		summary := ServerSummary{
@@ -220,7 +211,6 @@ func listServers(ups Upstreams, cfgs Configs) listServersOutput {
 			ToolCount:     status.ToolCount,
 			ResourceCount: status.ResourceCount,
 			Error:         status.Error,
-			Tools:         toolNames(tools[status.Name], maxListedTools),
 		}
 		if status.ServerName != status.Name {
 			summary.Title = status.ServerName
@@ -228,25 +218,6 @@ func listServers(ups Upstreams, cfgs Configs) listServersOutput {
 		out.Servers = append(out.Servers, summary)
 	}
 	return out
-}
-
-// toolNames lists a server's tool names, sorted, keeping the first limit.
-func toolNames(tools []*mcp.Tool, limit int) []string {
-	names := make([]string, 0, len(tools))
-	for _, tool := range tools {
-		if tool != nil && tool.Name != "" {
-			names = append(names, tool.Name)
-		}
-	}
-	slices.Sort(names)
-	names = slices.Compact(names)
-	if len(names) > limit {
-		names = names[:limit]
-	}
-	if len(names) == 0 {
-		return nil
-	}
-	return names
 }
 
 func getToolDetails(ups Upstreams, cfgs Configs, own OwnTools, server, tool string) (getToolDetailsOutput, error) {

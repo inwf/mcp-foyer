@@ -339,11 +339,6 @@ func TestListServers(t *testing.T) {
 	if files.ToolCount != 2 {
 		t.Errorf("files toolCount = %d, want 2", files.ToolCount)
 	}
-	// The names are what say what a server does; a count does not, and
-	// most operators never write a description.
-	if want := []string{"read", "write"}; !slices.Equal(files.Tools, want) {
-		t.Errorf("files tools = %v, want %v", files.Tools, want)
-	}
 
 	// A failed server is still listed, with its explanation: knowing it
 	// exists and why it is down is the point.
@@ -358,42 +353,24 @@ func TestListServers(t *testing.T) {
 	if broken.Description != "" {
 		t.Errorf("broken description = %q, want none for a server that is down", broken.Description)
 	}
-	if broken.Tools != nil {
-		t.Errorf("broken lists tools %v, want none for a server that is down", broken.Tools)
-	}
 }
 
-// An overview of a hundred servers of a hundred tools each is not an
-// overview. The names are a sample past a point, and the count says so.
-func TestListServersNamesOnlySoManyTools(t *testing.T) {
-	ups := twoServers()
-	var many []*mcp.Tool
-	for i := range 30 {
-		many = append(many, &mcp.Tool{Name: fmt.Sprintf("tool_%02d", i)})
-	}
-	ups.tools["files"] = many
-	ups.statuses[0].ToolCount = len(many)
-	session := gatewayFixture(t, ups, twoServersConfig(t))
+// An overview is counts, not contents. A hundred servers answering with
+// their tool names would put a directory into the context on every call,
+// which is the thing this gateway exists to avoid; what one server offers
+// is a question for search_tools(server).
+func TestListServersDoesNotNameTools(t *testing.T) {
+	session := gatewayFixture(t, twoServers(), twoServersConfig(t))
 
 	var out struct {
-		Servers []gateway.ServerSummary `json:"servers"`
+		Servers []map[string]any `json:"servers"`
 	}
 	structured(t, callSystemTool(t, session, gateway.ToolListServers, nil), &out)
 
-	var files gateway.ServerSummary
-	for _, s := range out.Servers {
-		if s.Name == "files" {
-			files = s
+	for _, server := range out.Servers {
+		if _, exists := server["tools"]; exists {
+			t.Errorf("server %v lists its tools; an overview carries counts only", server["name"])
 		}
-	}
-	if len(files.Tools) != 20 {
-		t.Errorf("listed %d tool names, want 20", len(files.Tools))
-	}
-	if files.ToolCount != 30 {
-		t.Errorf("toolCount = %d, want the full 30 so the caller knows the names are a sample", files.ToolCount)
-	}
-	if !slices.IsSorted(files.Tools) {
-		t.Errorf("tool names are not sorted: %v", files.Tools)
 	}
 }
 
