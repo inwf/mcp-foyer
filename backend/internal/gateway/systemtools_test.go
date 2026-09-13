@@ -339,6 +339,11 @@ func TestListServers(t *testing.T) {
 	if files.ToolCount != 2 {
 		t.Errorf("files toolCount = %d, want 2", files.ToolCount)
 	}
+	// The names are what say what a server does; a count does not, and
+	// most operators never write a description.
+	if want := []string{"read", "write"}; !slices.Equal(files.Tools, want) {
+		t.Errorf("files tools = %v, want %v", files.Tools, want)
+	}
 
 	// A failed server is still listed, with its explanation: knowing it
 	// exists and why it is down is the point.
@@ -352,6 +357,43 @@ func TestListServers(t *testing.T) {
 	// A missing description stays absent even for a failed server.
 	if broken.Description != "" {
 		t.Errorf("broken description = %q, want none for a server that is down", broken.Description)
+	}
+	if broken.Tools != nil {
+		t.Errorf("broken lists tools %v, want none for a server that is down", broken.Tools)
+	}
+}
+
+// An overview of a hundred servers of a hundred tools each is not an
+// overview. The names are a sample past a point, and the count says so.
+func TestListServersNamesOnlySoManyTools(t *testing.T) {
+	ups := twoServers()
+	var many []*mcp.Tool
+	for i := range 30 {
+		many = append(many, &mcp.Tool{Name: fmt.Sprintf("tool_%02d", i)})
+	}
+	ups.tools["files"] = many
+	ups.statuses[0].ToolCount = len(many)
+	session := gatewayFixture(t, ups, twoServersConfig(t))
+
+	var out struct {
+		Servers []gateway.ServerSummary `json:"servers"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolListServers, nil), &out)
+
+	var files gateway.ServerSummary
+	for _, s := range out.Servers {
+		if s.Name == "files" {
+			files = s
+		}
+	}
+	if len(files.Tools) != 20 {
+		t.Errorf("listed %d tool names, want 20", len(files.Tools))
+	}
+	if files.ToolCount != 30 {
+		t.Errorf("toolCount = %d, want the full 30 so the caller knows the names are a sample", files.ToolCount)
+	}
+	if !slices.IsSorted(files.Tools) {
+		t.Errorf("tool names are not sorted: %v", files.Tools)
 	}
 }
 
@@ -481,8 +523,14 @@ func TestBrowsingToolsOnADisconnectedServer(t *testing.T) {
 	if !result.IsError {
 		t.Fatal("listing tools on a failed server succeeded")
 	}
-	if text := resultText(result); !strings.Contains(text, "failed") {
+	text := resultText(result)
+	if !strings.Contains(text, "failed") {
 		t.Errorf("error %q does not say the server is not connected", text)
+	}
+	// "Unavailable" is a dead end; the recorded reason is something the
+	// caller can relay to whoever can fix it.
+	if !strings.Contains(text, "command not found") {
+		t.Errorf("error %q does not say why the server is down", text)
 	}
 }
 
