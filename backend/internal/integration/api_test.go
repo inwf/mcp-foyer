@@ -233,7 +233,10 @@ func TestSearchingEveryToolKeepsTheUnexposedOnesApart(t *testing.T) {
 	var got struct {
 		Tools []api.AggregatedTool `json:"tools"`
 	}
-	stack.apiGet(t, "/api/tools?all=true&limit=100&q=e", &got)
+	// "to" is a whole word in the descriptions of sleep ("to provoke a
+	// timeout") and fail ("to exercise failure handling"), neither of
+	// which is exposed.
+	stack.apiGet(t, "/api/tools?all=true&limit=100&q=to", &got)
 
 	seen := map[string]bool{}
 	for _, tool := range got.Tools {

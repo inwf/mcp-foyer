@@ -87,11 +87,42 @@ func TestMoreTermsMatchedRanksHigher(t *testing.T) {
 	if hits[0].Matched != 2 {
 		t.Errorf("top hit %q matched %d terms, want both", hits[0].Exposed, hits[0].Matched)
 	}
+	// Both words are equally rare here, so the tools answering both of
+	// them come before the tool answering one.
 	for i := 1; i < len(hits); i++ {
 		if hits[i-1].Matched < hits[i].Matched {
 			t.Errorf("hit %d matched %d terms, above hit %d which matched %d",
 				i-1, hits[i-1].Matched, i, hits[i].Matched)
 		}
+	}
+}
+
+// Matching more words is not the contract, though: a word that appears
+// in most candidates says little about which of them the caller meant.
+// The tool that answers the one rare word belongs above the tool that
+// answers two common ones. This is what the number of words matched must
+// not be allowed to decide.
+func TestARareWordOutweighsCommonOnes(t *testing.T) {
+	directory := []gateway.Searchable{
+		{Server: "github", Tool: "list_issues", Description: "List issues in a GitHub repository"},
+		{Server: "github", Tool: "list_commits", Description: "Get list of commits in a GitHub repository"},
+		{Server: "github", Tool: "list_pull_requests", Description: "List pull requests in a GitHub repository"},
+		{Server: "github", Tool: "list_branches", Description: "List branches in a GitHub repository"},
+		{Server: "github", Tool: "get_issue", Description: "Get details of a specific issue"},
+	}
+
+	// "list" and "github" are in almost every candidate; "issue" is in two.
+	hits := gateway.SearchTools("github list issue", directory, 0)
+
+	if len(hits) == 0 || hits[0].Tool != "list_issues" {
+		t.Fatalf("SearchTools(\"github list issue\") = %v, want list_issues first", hitNames(hits))
+	}
+	// get_issue answered one word, the other list_ tools answered two.
+	// Its one word is the one that told the tools apart.
+	position := slices.IndexFunc(hits, func(h gateway.SearchHit) bool { return h.Tool == "get_issue" })
+	if position != 1 {
+		t.Errorf("get_issue came %dth, want second, above the tools that only matched the common words: %v",
+			position+1, hitNames(hits))
 	}
 }
 
@@ -194,22 +225,23 @@ func TestSearchOrderIsStable(t *testing.T) {
 	}
 }
 
-// Relevance is the pair, in that order: how much of the query a tool
-// answered, then where it answered it. A tool matching two words from
-// their descriptions belongs above one matching a single word exactly,
-// which is why score alone is not the contract.
+// The order is the score, and nothing else: a caller reading the list
+// top-down is reading it best-first. Matched is reported alongside, but
+// it is information about a hit, not its rank.
 func TestHitsAreOrderedByRelevance(t *testing.T) {
 	hits := gateway.SearchTools("read file", candidates(), 0)
 
+	if len(hits) == 0 || hits[0].Exposed != "files_read" {
+		t.Fatalf("SearchTools(\"read file\") = %v, want files_read first", hitNames(hits))
+	}
 	for i := 1; i < len(hits); i++ {
-		before, after := hits[i-1], hits[i]
-		if before.Matched < after.Matched {
-			t.Errorf("hit %d matched %d terms, above hit %d which matched %d",
-				i-1, before.Matched, i, after.Matched)
+		if hits[i-1].Score < hits[i].Score {
+			t.Errorf("hit %d scores %d, above hit %d at %d", i-1, hits[i-1].Score, i, hits[i].Score)
 		}
-		if before.Matched == after.Matched && before.Score < after.Score {
-			t.Errorf("hit %d scores %d, above hit %d at %d on the same term count",
-				i-1, before.Score, i, after.Score)
+	}
+	for _, hit := range hits {
+		if hit.Score <= 0 {
+			t.Errorf("hit %q matched and yet scores %d; a caller reads zero as no match", hit.Exposed, hit.Score)
 		}
 	}
 }

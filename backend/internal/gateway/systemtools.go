@@ -98,7 +98,7 @@ type callToolInput struct {
 }
 
 type searchToolsInput struct {
-	Query         string `json:"query,omitempty" jsonschema:"words to match in tool and server names and descriptions; matches any word and ranks tools matching more words higher. Supply query or server"`
+	Query         string `json:"query,omitempty" jsonschema:"words describing the capability, matched against tool and server names and descriptions in any spelling (readFile finds read_file); rarer words weigh more and a word matching nothing is ignored, not fatal. The directory may mix languages, so when unsure give the words in both. Supply query or server"`
 	Server        string `json:"server,omitempty" jsonschema:"exact server name to search or browse; use mcphub for this gateway's own tools"`
 	Limit         *int   `json:"limit,omitempty" jsonschema:"maximum number of results, from 1 to 20; default 5 in either schema mode"`
 	IncludeSchema bool   `json:"includeSchema,omitempty" jsonschema:"include complete input schemas and annotations in results; default false. A limit of 1 to 3 is usually enough when preparing a call"`
@@ -323,7 +323,7 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 			})
 		}
 	}
-	hits := SearchTools(in.Query, candidates, 0)
+	hits, unmatched := searchCandidates(in.Query, candidates, 0)
 	start, nextCursor, err := searchPageCursor(in, hits, limit)
 	if err != nil {
 		return searchToolsOutput{}, err
@@ -332,7 +332,7 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 	out := searchToolsOutput{
 		Query: in.Query, Server: in.Server,
 		Hits: make([]searchToolHit, 0, end-start), NextCursor: nextCursor,
-		Unmatched: UnmatchedTerms(in.Query, candidates),
+		Unmatched: unmatched,
 	}
 	for _, hit := range hits[start:end] {
 		result := searchToolHit{SearchHit: hit}
