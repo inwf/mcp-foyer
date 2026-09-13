@@ -3,6 +3,7 @@ package gateway
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -53,8 +54,11 @@ func checkArguments(tool *mcp.Tool, args map[string]any) error {
 		instance = map[string]any{}
 	}
 	if err := resolved.Validate(instance); err != nil {
-		return fmt.Errorf("the arguments do not match %s's input schema: %v; "+
-			"get_tool_details gives the schema", tool.Name, err)
+		// The validator prefixes every message with where it was when it
+		// failed, and for the arguments object that is always the root.
+		detail := strings.TrimPrefix(err.Error(), "validating root: ")
+		return fmt.Errorf("the arguments do not match %s's input schema: %s; "+
+			"get_tool_details gives the schema", tool.Name, detail)
 	}
 	return nil
 }
