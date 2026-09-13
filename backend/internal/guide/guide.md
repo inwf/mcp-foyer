@@ -139,10 +139,10 @@ mcphub 提供四个系统工具，按需发现上游能力。默认的 `tools/li
 
 | 工具 | 用途 |
 | --- | --- |
-| `list_servers` | 查看配置的服务器、描述、连接状态及工具和资源数量 |
+| `list_servers` | 查看配置的服务器：描述、连接状态、工具数与前 20 个工具名 |
 | `search_tools` | 按关键词搜索，或指定服务器分页浏览；可同时取得完整输入 schema |
 | `get_tool_details` | 查看一个已知工具的完整输入 schema、title 与 annotations |
-| `call_tool` | 按 `server` + `tool` 调用上游，`args` 放业务参数 |
+| `call_tool` | 按 `server` + `tool` 调用上游，`args` 放业务参数；转发前按 schema 校验 |
 
 已知目标时直接搜索；已知服务器、工具和参数时直接调用，无需重复发现：
 
@@ -184,6 +184,15 @@ get_tool_details(server="mcphub", tool="call_tool")
 
 `call_tool` 只转发到配置中的上游，不调用网关自己的系统工具。上游工具即使也叫
 `search_tools` 或 `call_tool`，照样按指定的上游服务器转发。
+
+`call_tool` 在转发前会把 `args` 对照该工具缓存的输入 schema 校验一遍：缺
+required 字段、类型不对，会在网关这里以可读的错误返回，不走一趟上游。网关判断
+不了的情况一律放行，由上游裁决：缓存里还没有这个工具（列表变更通知可能滞后）、
+schema 解析不了、schema 声明了校验器不支持的版本。
+
+这几件事简单的客户端未必看得到：`initialize.instructions`、资源。所以四个工具
+的 description 各自把规则说全，`list_servers` 直接带上工具名，不指望模型去读
+`hub://servers/{名字}`。
 
 资源 `hub://guide` 是本文；`hub://servers/{名字}` 返回服务器的状态、描述及全部
 工具的「名字 → 描述」映射。不需要参数 schema 时，一次读取就能了解一台服务器。

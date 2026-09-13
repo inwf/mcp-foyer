@@ -7,10 +7,10 @@
 
 | 工具 | 输入 | 返回 |
 | --- | --- | --- |
-| `list_servers` | 无 | 配置的服务器名称、描述、状态、握手 title、工具/资源数量和错误 |
+| `list_servers` | 无 | 配置的服务器名称、描述、状态、握手 title、工具/资源数量、错误，以及排序后的前 20 个工具名 |
 | `search_tools` | `query` 或 `server`，可加 `limit`、`includeSchema`、`cursor` | `hits`、可选 `nextCursor` 和 `unmatched` |
 | `get_tool_details` | `server`、`tool` | 标识、对外名、描述、title、完整输入 schema、annotations |
-| `call_tool` | `server`、`tool`、可选 `args` | 上游原始结果，包括业务错误 |
+| `call_tool` | `server`、`tool`、可选 `args` | 上游原始结果，包括业务错误；`args` 不符合 schema 时在网关返回错误 |
 
 已知目标时直接 `search_tools`，不必先列所有服务器。准备调用时可设置
 `includeSchema=true`，一次搜索就获得参数定义；已知工具也能单独取详情。
@@ -19,6 +19,24 @@
 搜索和详情以 **`server` + `tool`** 标识一个工具，避免不同上游的短名冲突。
 `exposed` 为可直接调用的发布名，未暴露时为空。上游工具即使与系统工具同名，
 `call_tool` 也按指定的上游转发。
+
+## 面向简单客户端的约定
+
+这个网关服务的客户端不一定把 `initialize.instructions` 交给模型，也不一定支持
+resources。因此：
+
+- 四个工具的 description 各自自足，不依赖 instructions 或资源里说过的规则；
+  模型可见的文本里统一只说「在/不在这个工具列表里」。
+- `list_servers` 每台服务器附带 `tools`（排序后最多 20 个名字），`toolCount`
+  是总数；一次调用就能知道每台服务器大致能做什么，不必再读资源。
+- 服务器断连时的错误带上记录的原因（如 `command not found`），模型能转述给
+  能修的人。
+- `call_tool` 在转发前按该工具缓存的输入 schema 校验 `args`，缺 required 字段
+  或类型不符时返回可读错误并指向 `get_tool_details`，不走一趟上游。校验只在网关
+  能理解 schema 时进行：缓存里没有该工具、schema 解析失败、声明了不支持的
+  JSON Schema 版本，都照常转发，上游仍是权威。
+- 系统工具的结构化输出同时以 JSON 文本放在 `content` 里（Go SDK 的规范
+  fallback），只读 `content` 的客户端拿到的是完整结果。
 
 ## 搜索参数与分页
 
@@ -88,8 +106,9 @@ schema；调用结果原样透传。
 服务器没有描述时省略该字段，不在每条结果中重复补写提示。服务器描述仍可从 Web
 或配置维护。
 
-`initialize.instructions` 会说明上述发现和调用路径，并指向指南。测试把工具名
-与实际注册清单对照，防止文案在工具改名后继续指向旧入口。
+`initialize.instructions` 会说明上述发现和调用路径，并指向指南；它和各工具的
+description 用同一套措辞。测试把工具名与实际注册清单对照，防止文案在工具改名后
+继续指向旧入口。
 
 ## MCP 互操作
 
