@@ -24,15 +24,21 @@
 
 | 参数 | 规则 |
 | --- | --- |
-| `query` | 可省略；匹配工具名、工具描述、服务器名、握手名称与服务器描述 |
+| `query` | 可省略；匹配工具名、工具描述、服务器名、握手名称与服务器描述。名字按 `_`、`-` 和驼峰拆词并折叠英文复数，中文按相邻两字匹配 |
 | `server` | 可省略；准确的配置名，或 `mcphub`；仅给此项时浏览单台服务器 |
 | `limit` | 默认 5，范围 1–20；两种 schema 模式相同，显式 0 也拒绝 |
 | `includeSchema` | 默认 false；true 时给所选候选附上完整输入 schema、title 和 annotations |
 | `cursor` | 上一页的 `nextCursor`；必须配合相同的 query 和 server |
 
-`query` 和 `server` 至少有一个非空值。多个关键词按 OR 匹配：命中词数
-`matched` 优先，其次按位置权重 `score` 排序，最后以服务器名和工具名稳定排序。
-名称匹配优先于描述。没有匹配任何候选的词放在 `unmatched`，不抹掉其他词的结果。
+`query` 和 `server` 至少有一个非空值。多个关键词按 OR 匹配，以分字段 BM25 计分：
+一个词在候选中越少见贡献越大，出现在工具名里的权重高于服务器名，再高于描述，
+长字段按长度折减。名字还以去掉分隔符的整体形式参与匹配，所以 `readfile`、
+`readFile`、`read file` 都能精确命中 `read_file`。只按 `score` 排序，平局以
+服务器名和工具名稳定排序；`matched` 报告命中的查询词数，不参与排序。没有匹配
+任何候选的词放在 `unmatched`，不抹掉其他词的结果。
+
+查询要用目录所用的语言：中文查询打到纯英文的目录不会有结果。目录可能中英混合，
+不确定时两种语言的词都写上，命中任一种即可。
 
 ```json
 {"query":"read file","includeSchema":true,"limit":2}
@@ -48,14 +54,14 @@
       "exposed":"",
       "description":"read a file",
       "matched":2,
-      "score":1150,
+      "score":1487,
       "inputSchema":{"type":"object","properties":{"path":{"type":"string"}}}
     }
   ]
 }
 ```
 
-示例只展示结果结构；具体 score 取决于工具名、服务器名和描述的匹配位置。
+示例只展示结果结构；具体 score 只在同一次搜索内可比，取决于目录里其他工具。
 `nextCursor` 仅在还有结果时返回，最后一页省略。翻页可以改变 `limit` 或
 `includeSchema`，但 query/server 必须保持相同含义；query 忽略大小写和词间空白。
 

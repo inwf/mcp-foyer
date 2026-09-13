@@ -147,7 +147,7 @@ mcphub 提供四个系统工具，按需发现上游能力。默认的 `tools/li
 已知目标时直接搜索；已知服务器、工具和参数时直接调用，无需重复发现：
 
 ```text
-search_tools(query="读取文件", includeSchema=true, limit=2)
+search_tools(query="read file 读取文件", includeSchema=true, limit=2)
 call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 ```
 
@@ -158,8 +158,11 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 `search_tools` 的参数：
 
 - `query`、`server` 至少提供一个非空值。只填 `server` 就是浏览该服务器。
-- `query` 匹配工具名、工具描述、服务器名、握手名称和服务器描述，不区分大小写。
-  多词匹配其中任意一个就能入选，命中词多的排前面，未命中的词列在 `unmatched`。
+- `query` 匹配工具名、工具描述、服务器名、握手名称和服务器描述。名字按 `_`、`-`
+  和驼峰拆词，`readFile` 也能找到 `read_file`；中文按相邻两字匹配，`查询天气`
+  能找到「查询指定城市的天气」。多个词命中任意一个即入选，越少见的词权重越高，
+  命中名字比命中描述权重高；未命中的词列在 `unmatched`。查询要用目录所用的
+  语言，目录可能中英混合，不确定时两种语言的词都写上。
 - `limit` 默认 **5**，范围 **1–20**。显式传 0、负数或大于 20 会报错。
 - `includeSchema` 默认 `false`；设为 `true` 时返回所选结果的完整 schema 和
   annotations，默认数量仍为 5。准备调用通常取 1–3 个候选即可，schema 不截断。
@@ -170,7 +173,7 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 增减或重新排序，会要求从第一页重查。只改 schema 而顺序不变时，下一页读到最新详情。
 
 搜索结果和工具详情都用 `server` + `tool` 标识工具；`exposed` 是可直接调用的
-对外名，未暴露时为空。搜索保留 `matched`、`score` 排序信息。
+对外名，未暴露时为空。结果按 `score` 排序；`matched` 是命中的查询词数，只供参考。
 
 网关自己的工具直接调用。要查看它们，用 `server="mcphub"`：
 
