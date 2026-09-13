@@ -40,15 +40,19 @@ type Options struct {
 
 // instructions explains progressive discovery before the first call.
 // Tests compare its names with the registered tools and the guide URI.
-const instructions = `This gateway proxies MCP servers. Its tool list contains four system tools plus any upstream tools explicitly exposed by the operator.
+//
+// Not every client shows a model these instructions, so each tool's own
+// description repeats what it needs; this is the version for clients
+// that do, and it says the same things in the same words.
+const instructions = `This gateway stands in front of several MCP servers. This tool list holds the gateway's four own tools plus whichever server tools the operator chose to list; most server tools are not in this list and are reached through the four.
 
-When you know the capability you need, use search_tools(query). To browse one server, use search_tools(server); list_servers gives an overview of configured servers and their state. Search matches tool and server names and descriptions, including hidden tools. It defaults to five results; follow nextCursor with the same query and server for more. Use includeSchema=true to prepare a call in one search, or get_tool_details(server, tool) for one known tool's full input schema and annotations.
+To find a capability: search_tools(query). To see what one server offers: search_tools(server), or list_servers for every server with its state and tool names. Search covers tools whether or not they are in this list. Add includeSchema=true to get each hit's input schema in the same result, or ask get_tool_details(server, tool) for one tool's schema.
 
-When you already know the server, tool and arguments, call_tool(server, tool, args) directly. Tools absent from tools/list are still callable. An exposed upstream tool can also be called directly by its published name.
+To use a tool: call_tool(server, tool, args). The arguments are checked against the tool's schema before forwarding. When server, tool and arguments are already known, call without searching first. A server tool that is in this list can also be called by its listed name.
 
-The gateway's system tools — list_servers, search_tools, get_tool_details, call_tool — are called directly. Use server="mcphub" with search_tools or get_tool_details to inspect them; call_tool only forwards to upstream servers.
+The four own tools — list_servers, search_tools, get_tool_details, call_tool — are called directly, never through call_tool. Pass server="mcphub" to search_tools or get_tool_details to inspect them.
 
-The resource hub://servers/{name} describes one server and its tools. The resource hub://guide contains the full usage guide.`
+For clients that read resources, hub://guide is the full usage guide.`
 
 // Gateway is the single MCP endpoint clients connect to. It exposes the
 // gateway's own tools plus every tool of every connected upstream
