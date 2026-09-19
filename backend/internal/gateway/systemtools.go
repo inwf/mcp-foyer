@@ -102,7 +102,7 @@ type callToolInput struct {
 }
 
 type searchToolsInput struct {
-	Query         string `json:"query,omitempty" jsonschema:"words describing the capability, matched against tool and server names and descriptions in any spelling (readFile finds read_file); rarer words weigh more and a word matching nothing is ignored, not fatal. The directory may mix languages, so when unsure give the words in both. Supply query or server"`
+	Query         string `json:"query,omitempty" jsonschema:"words describing the capability, matched against tool and server names and descriptions and parameter names, in any spelling (readFile finds read_file); rarer words weigh more and a word matching nothing is ignored, not fatal. The directory may mix languages, so when unsure give the words in both. Supply query or server"`
 	Server        string `json:"server,omitempty" jsonschema:"exact server name to search within, or to browse when query is omitted; mcphub for this gateway's own tools"`
 	Limit         *int   `json:"limit,omitempty" jsonschema:"maximum number of results, from 1 to 20; default 5"`
 	IncludeSchema bool   `json:"includeSchema,omitempty" jsonschema:"also return each hit's complete input schema and annotations, so a call can be prepared from this one result; default false. Combine with a limit of 1 to 3"`
@@ -350,6 +350,7 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 			candidates = append(candidates, Searchable{
 				Server: server, Tool: tool.Name, Exposed: exposed, Description: tool.Description,
 				ServerTitle: title, ServerDescription: description,
+				Arguments: ArgumentText(tool.InputSchema),
 			})
 		}
 	}

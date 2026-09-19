@@ -32,12 +32,19 @@ type Searchable struct {
 	Tool              string
 	Exposed           string
 	Description       string
+
+	// Arguments is the text of the tool's parameters — their names and
+	// descriptions — as [ArgumentText] extracts it from the input schema.
+	// A caller that knows what it wants to pass ("branch", "dryRun")
+	// often knows that better than what the tool is called.
+	Arguments string
 }
 
 // The fields of a candidate a term can be found in, each with a weight.
 // A term in the tool's name says far more about relevance than the same
 // term in prose, and the server's name says where the tool is, which is
-// often half of what the caller typed.
+// often half of what the caller typed. Argument text is the weakest
+// signal: parameters named path and query are everywhere.
 //
 // The exposed name is not a field of its own: its terms are the server's
 // and the tool's, and counting them again would rank a tool above an
@@ -48,6 +55,7 @@ const (
 	fieldServerTitle
 	fieldDescription
 	fieldServerDescription
+	fieldArguments
 	fieldCount
 )
 
@@ -57,6 +65,7 @@ var fieldWeights = [fieldCount]float64{
 	fieldServerTitle:       1,
 	fieldDescription:       1,
 	fieldServerDescription: 1,
+	fieldArguments:         0.5,
 }
 
 // BM25 parameters. k1 bounds how much repeating a term can add, so that
@@ -206,6 +215,18 @@ func joinedTerms(terms []string) []string {
 	return terms
 }
 
+// argumentTerms are the terms of a tool's argument text, with each
+// word's joined form as well, so that a parameter name is matched the
+// way a tool name is: a caller writing fullPage or full_page meets
+// fullPage exactly, rather than as the two common words it splits into.
+func argumentTerms(text string) []string {
+	var terms []string
+	for _, word := range strings.Fields(text) {
+		terms = append(terms, wordTerms(word)...)
+	}
+	return terms
+}
+
 // searchIndex is an inverted index over one set of candidates: for each
 // term, where it occurs. It is built per search: the candidates are
 // whatever the caller has cached, and a few thousand short texts index in
@@ -257,6 +278,7 @@ func indexCandidates(candidates []Searchable) *searchIndex {
 			fieldServerTitle:       shared[1],
 			fieldDescription:       tokenize(candidate.Description),
 			fieldServerDescription: shared[2],
+			fieldArguments:         argumentTerms(candidate.Arguments),
 		}
 		for f, terms := range texts {
 			idx.lengths[i][f] = len(terms)

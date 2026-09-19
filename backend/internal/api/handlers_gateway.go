@@ -121,6 +121,7 @@ func searchWithin(query string, tools []AggregatedTool, limit int) []AggregatedT
 			Tool:        tool.Tool,
 			Exposed:     tool.Exposed,
 			Description: tool.Description,
+			Arguments:   gateway.ArgumentText(tool.InputSchema),
 		})
 	}
 

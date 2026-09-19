@@ -274,6 +274,7 @@ func rankTools(search string, tools []aggregatedTool) []aggregatedTool {
 			Tool:        tool.Tool,
 			Exposed:     tool.Exposed,
 			Description: tool.Description,
+			Arguments:   gateway.ArgumentText(tool.InputSchema),
 		})
 	}
 

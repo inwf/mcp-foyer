@@ -26,6 +26,7 @@ func corpusCandidates(t *testing.T) []gateway.Searchable {
 			Tools       []struct {
 				Name        string `json:"name"`
 				Description string `json:"description"`
+				Arguments   string `json:"arguments"`
 			} `json:"tools"`
 		} `json:"servers"`
 	}
@@ -37,7 +38,7 @@ func corpusCandidates(t *testing.T) []gateway.Searchable {
 		for _, tool := range server.Tools {
 			out = append(out, gateway.Searchable{
 				Server: server.Name, ServerTitle: server.Title, ServerDescription: server.Description,
-				Tool: tool.Name, Description: tool.Description,
+				Tool: tool.Name, Description: tool.Description, Arguments: tool.Arguments,
 			})
 		}
 	}
@@ -106,6 +107,18 @@ func TestSearchRanksTheToolTheCallerMeant(t *testing.T) {
 
 		// Mixed-language queries land on whichever half the directory speaks.
 		{query: "weather 天气", want: []string{"weather/get_weather", "weather/get_forecast", "weather/get_air_quality"}},
+
+		// Parameters. A caller that knows what it wants to pass may know
+		// no other word for the tool; and a parameter everything takes
+		// ("path", "repo") must not drown the tools whose names say the
+		// thing.
+		{query: "dryRun", want: []string{"files/edit_file"}},
+		{query: "thread_ts", want: []string{"slack/slack_reply_to_thread", "slack/slack_get_thread_replies"}},
+		{query: "fullPage", want: []string{"browser/browser_take_screenshot"}},
+		{query: "upload files", want: []string{"browser/browser_file_upload"}},
+		{query: "search files by pattern", want: []string{"files/search_files"}},
+		{query: "create branch", want: []string{"github/create_branch", "git/git_create_branch"}},
+		{query: "read file", want: []string{"files/read_file"}},
 	} {
 		t.Run(tc.query, func(t *testing.T) {
 			hits := gateway.SearchTools(tc.query, candidates, 3)
