@@ -7,6 +7,7 @@ import type {
   ConfigWriteResponse,
   GatewayStatus,
   GatewayTools,
+  UsageSnapshot,
   Health,
   ImportSummary,
   LogQuery,
@@ -142,6 +143,10 @@ export const endpoints = {
       .then((r) => r.sessions),
 
   gatewayTools: () => api.get<GatewayTools>(`${BASE}/gateway/tools`),
+
+  gatewayUsage: () => api.get<UsageSnapshot>(`${BASE}/gateway/usage`),
+
+  resetGatewayUsage: () => api.delete<void>(`${BASE}/gateway/usage`),
 
   // ===== logs =====
 

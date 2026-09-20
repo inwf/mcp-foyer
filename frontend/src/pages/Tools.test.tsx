@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { renderWithProviders } from '@/test/harness';
+import type { UsageSnapshot } from '@/api/types';
 import { useToolLayoutStore } from '@/stores/tool-layout';
 import { useToolCollapseStore } from '@/stores/tool-collapse';
 import Tools from './Tools';
@@ -75,13 +76,23 @@ function view(name: string, overrides: Record<string, unknown> = {}) {
 
 const VIEWS = [view('files'), view('bing')];
 
-function serving(forwarded = FORWARDED, own = OWN, views: unknown[] = VIEWS) {
+/** Usage counts as the API reports them; empty unless a test is about
+ *  them. */
+const NO_USAGE: UsageSnapshot = { since: '2026-09-19T08:00:00Z', entries: [] };
+
+function serving(
+  forwarded = FORWARDED,
+  own = OWN,
+  views: unknown[] = VIEWS,
+  usage: UsageSnapshot = NO_USAGE,
+) {
   api.use(
     http.get('/api/tools', () =>
       HttpResponse.json({ tools: forwarded, total: forwarded.length }),
     ),
     http.get('/api/gateway/tools', () => HttpResponse.json(own)),
     http.get('/api/servers', () => HttpResponse.json({ servers: views })),
+    http.get('/api/gateway/usage', () => HttpResponse.json(usage)),
   );
 }
 
@@ -740,5 +751,119 @@ describe('folding a group away', () => {
     expect(screen.queryByText('files_read')).not.toBeInTheDocument();
 
     useToolLayoutStore.setState({ layout: 'cards' });
+  });
+});
+
+/*
+ * What the models have done with each tool.
+ *
+ * The page exists so that an operator can decide what to expose, and the
+ * counts are the evidence: what gets reached for, what gets found but
+ * never used, what was never found at all. A number that could be mistaken
+ * for a measurement of nothing — a zero — is avoided in favour of saying
+ * "never".
+ */
+describe('usage counts', () => {
+  const USAGE: UsageSnapshot = {
+    since: '2026-09-19T08:00:00Z',
+    entries: [
+      {
+        server: 'bing',
+        tool: 'search',
+        searched: 7,
+        called: 3,
+        failed: 1,
+        lastCalled: '2026-09-19T09:30:00Z',
+      },
+    ],
+  };
+
+  afterEach(() => {
+    useToolLayoutStore.setState({ layout: 'cards' });
+    localStorage.clear();
+  });
+
+  it('shows how often a tool was called and found', async () => {
+    serving(FORWARDED, OWN, VIEWS, USAGE);
+    renderWithProviders(<Tools />);
+
+    await screen.findByText('bing_search');
+    expect(within(group('bing')).getByText(/调用 3 · 搜到 7/)).toBeInTheDocument();
+    expect(within(group('bing')).getByText(/失败 1/)).toBeInTheDocument();
+  });
+
+  it('says a tool was never used rather than showing zeros', async () => {
+    serving(FORWARDED, OWN, VIEWS, USAGE);
+    renderWithProviders(<Tools />);
+
+    await screen.findByText('files_read');
+    expect(within(group('files')).getByText('未被使用')).toBeInTheDocument();
+  });
+
+  // The gateway's own tools are in every client's list and are not
+  // counted, so a "never used" on them would be a false statement.
+  it("does not count the gateway's own tools", async () => {
+    serving(FORWARDED, OWN, VIEWS, USAGE);
+    renderWithProviders(<Tools />);
+
+    await screen.findByText('list_servers');
+    expect(within(group('系统工具')).queryByText('未被使用')).not.toBeInTheDocument();
+  });
+
+  it('can order the tools by use', async () => {
+    serving(
+      [
+        { server: 'files', tool: 'read', exposed: 'files_read', description: 'read a file' },
+        { server: 'files', tool: 'write', exposed: 'files_write', description: 'write a file' },
+      ],
+      OWN,
+      VIEWS,
+      {
+        since: '2026-09-19T08:00:00Z',
+        entries: [{ server: 'files', tool: 'write', searched: 0, called: 5, failed: 0 }],
+      },
+    );
+    renderWithProviders(<Tools />);
+
+    await screen.findByText('files_read');
+    await userEvent.click(screen.getByText('列表'));
+    const names = () =>
+      within(group('files'))
+        .getAllByRole('listitem')
+        .map((row) => row.textContent ?? '');
+
+    // By name to begin with, as the gateway ordered them.
+    expect(names()[0]).toContain('files_read');
+
+    await userEvent.click(screen.getByText('按使用'));
+    expect(names()[0]).toContain('files_write');
+  });
+
+  it('can be reset', async () => {
+    let reset = false;
+    serving(FORWARDED, OWN, VIEWS, USAGE);
+    api.use(
+      http.delete('/api/gateway/usage', () => {
+        reset = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderWithProviders(<Tools />);
+
+    await screen.findByText('bing_search');
+    await userEvent.click(screen.getByRole('button', { name: '清零' }));
+    await userEvent.click(await screen.findByRole('button', { name: '确定' }));
+
+    await waitFor(() => expect(reset).toBe(true));
+  });
+
+  // The counts are a convenience. A page that cannot get them is still
+  // the tools page, and must not turn into an error page.
+  it('still shows the tools when the counts cannot be loaded', async () => {
+    serving();
+    api.use(http.get('/api/gateway/usage', () => HttpResponse.error()));
+    renderWithProviders(<Tools />);
+
+    expect(await screen.findByText('files_read')).toBeInTheDocument();
   });
 });

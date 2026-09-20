@@ -230,6 +230,16 @@ export const zh = {
     exposedRatio: '已暴露 {{count}} / {{total}}',
     expose: '暴露给客户端',
     unexpose: '取消暴露（仍可用 call_tool 调用）',
+    order: '排序',
+    byName: '按名称',
+    byUsage: '按使用',
+    usageColumn: '模型使用',
+    usage: '调用 {{called}} · 搜到 {{searched}}',
+    usageFailed: '失败 {{count}}',
+    usageNever: '未被使用',
+    usageSince: '自 {{since}} 起统计，只计模型的使用，不含此处发起的调用',
+    resetUsage: '清零',
+    resetUsageDone: '使用计数已清零',
   },
 
   call: {

@@ -1,11 +1,21 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Segmented, Select, Skeleton, Switch, Tooltip } from 'antd';
+import {
+  App,
+  Button,
+  Input,
+  Popconfirm,
+  Segmented,
+  Select,
+  Skeleton,
+  Switch,
+  Tooltip,
+} from 'antd';
 import { SearchOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { endpoints } from '@/api/endpoints';
 import { keys } from '@/api/query';
-import type { AggregatedTool, ServerView, Tool } from '@/api/types';
+import type { AggregatedTool, ServerView, Tool, UsageEntry } from '@/api/types';
 import { Panel } from '@/components/Panel';
 import { PageHeading } from '@/components/PageHeading';
 import { StateBadge } from '@/components/StateBadge';
@@ -16,6 +26,7 @@ import { useExposure } from '@/hooks/use-exposure';
 import { useToolLayoutStore, type ToolLayout } from '@/stores/tool-layout';
 import { SYSTEM_GROUP, useToolCollapseStore } from '@/stores/tool-collapse';
 import { cx } from '@/lib/cx';
+import { fullTime } from '@/lib/format';
 import { stagger } from '@/lib/motion';
 import motion from '@/styles/motion.module.css';
 import styles from './Tools.module.css';
@@ -56,6 +67,66 @@ interface Group {
    *  search that ordering is a relevance ranking, and it is what puts the
    *  server that actually answered the search at the top. */
   rank: number;
+}
+
+/** What the tools are ordered by within a group. */
+type ToolOrder = 'name' | 'usage';
+
+/** Usage counts keyed by origin, which is how a tool is identified: every
+ *  unexposed tool shares the empty exposed name. */
+type UsageMap = Map<string, UsageEntry>;
+
+function originKey(server: string, tool: string): string {
+  return `${server}/${tool}`;
+}
+
+/**
+ * How much a model has used this tool, in a phrase.
+ *
+ * The counts are what the page is ultimately for: an operator deciding
+ * what to expose wants to know what gets reached for, and one wondering
+ * why a tool is never chosen wants to know whether it is ever found. A
+ * tool with no entry has never been either, and says so rather than
+ * showing zeros that look like a measurement.
+ */
+function UsageBadge({ entry }: { entry: UsageEntry | undefined }) {
+  const { t } = useTranslation();
+  if (!entry) {
+    return <span className={styles.usage}>{t('tools.usageNever')}</span>;
+  }
+  const phrase = t('tools.usage', { called: entry.called, searched: entry.searched });
+  return (
+    <Tooltip title={entry.lastCalled ? fullTime(entry.lastCalled) : undefined}>
+      <span className={styles.usage}>
+        {phrase}
+        {entry.failed > 0 ? (
+          <>
+            {' · '}
+            <span className={styles.usageFailed}>
+              {t('tools.usageFailed', { count: entry.failed })}
+            </span>
+          </>
+        ) : null}
+      </span>
+    </Tooltip>
+  );
+}
+
+/**
+ * Orders a group's tools by how much they are used, most first. Ties,
+ * and every tool with no use at all, keep the order they arrived in —
+ * which is the gateway's relevance order under a search and its name
+ * order otherwise.
+ */
+function byUsage(tools: AggregatedTool[], usage: UsageMap): AggregatedTool[] {
+  const weight = (tool: AggregatedTool) => {
+    const entry = usage.get(originKey(tool.server, tool.tool));
+    return entry ? entry.called * 1000 + entry.searched : 0;
+  };
+  return tools
+    .map((tool, index) => ({ tool, index, weight: weight(tool) }))
+    .sort((a, b) => b.weight - a.weight || a.index - b.index)
+    .map(({ tool }) => tool);
 }
 
 /** Turns an aggregated tool into what the call dialog takes. The dialog
@@ -157,12 +228,16 @@ function ToolCard({
   tool,
   index,
   view,
+  usage,
   onCall,
 }: {
   tool: AggregatedTool;
   index: number;
   /** The server this tool belongs to, absent for the gateway's own. */
   view?: ServerView | undefined;
+  /** How models have used it; absent for the gateway's own, which are
+   *  not counted. */
+  usage?: UsageEntry | undefined;
   onCall: () => void;
 }) {
   const { t } = useTranslation();
@@ -188,6 +263,12 @@ function ToolCard({
       </div>
 
       {tool.description ? <p className={styles.description}>{tool.description}</p> : null}
+
+      {tool.server !== '' ? (
+        <div className={styles.cardUsage}>
+          <UsageBadge entry={usage} />
+        </div>
+      ) : null}
 
       <div className={styles.foot}>
         {tool.server === '' ? (
@@ -224,11 +305,13 @@ function ToolRow({
   tool,
   index,
   view,
+  usage,
   onCall,
 }: {
   tool: AggregatedTool;
   index: number;
   view?: ServerView | undefined;
+  usage?: UsageEntry | undefined;
   onCall: () => void;
 }) {
   const { t } = useTranslation();
@@ -259,6 +342,10 @@ function ToolRow({
         {tool.description ?? ''}
       </span>
 
+      <span className={styles.rowUsage}>
+        {tool.server !== '' ? <UsageBadge entry={usage} /> : null}
+      </span>
+
       <span className={styles.rowActions}>
         {view ? <ExposeSwitch tool={tool} view={view} /> : null}
         <Button size="small" icon={<ThunderboltOutlined aria-hidden />} onClick={onCall}>
@@ -281,14 +368,17 @@ function ToolGroup({
   tools,
   view,
   layout,
+  usage,
   onCall,
 }: {
   tools: AggregatedTool[];
   view?: ServerView | undefined;
   layout: ToolLayout;
+  usage: UsageMap;
   onCall: (tool: AggregatedTool) => void;
 }) {
   const { t } = useTranslation();
+  const usageOf = (tool: AggregatedTool) => usage.get(originKey(tool.server, tool.tool));
   // Keyed by origin, not by exposed name: every unexposed tool has the
   // same empty one.
   if (layout === 'list') {
@@ -298,6 +388,7 @@ function ToolGroup({
           <span>{t('tools.name')}</span>
           <span className={styles.rowOrigin}>{t('tools.upstreamName')}</span>
           <span>{t('tools.summary')}</span>
+          <span className={styles.rowUsage}>{t('tools.usageColumn')}</span>
           <span>{t('servers.actions')}</span>
         </div>
         <div role="list">
@@ -307,6 +398,7 @@ function ToolGroup({
               tool={tool}
               index={index}
               view={view}
+              usage={usageOf(tool)}
               onCall={() => onCall(tool)}
             />
           ))}
@@ -323,6 +415,7 @@ function ToolGroup({
           tool={tool}
           index={index}
           view={view}
+          usage={usageOf(tool)}
           onCall={() => onCall(tool)}
         />
       ))}
@@ -335,17 +428,46 @@ export default function Tools() {
 
   const [search, setSearch] = useState('');
   const [server, setServer] = useState('');
+  const [order, setOrder] = useState<ToolOrder>('name');
   const [calling, setCalling] = useState<AggregatedTool | null>(null);
   const layout = useToolLayoutStore((state) => state.layout);
   const setLayout = useToolLayoutStore((state) => state.setLayout);
   const collapsed = useToolCollapseStore((state) => state.collapsed);
   const toggleGroup = useToolCollapseStore((state) => state.toggle);
+  const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   // The search runs on the gateway rather than here: it scores matches
   // across every connected server, and the result order is that score.
   const tools = useQuery({
     queryKey: keys.tools.aggregated(search, true),
     queryFn: () => endpoints.tools({ ...(search ? { search } : {}), limit: LIMIT, all: true }),
+  });
+
+  // What the models have done with the tools. Not on the critical path:
+  // a page without the counts is still the page, so its failure is not
+  // one of the page's.
+  const usageQuery = useQuery({
+    queryKey: keys.gateway.usage(),
+    queryFn: () => endpoints.gatewayUsage(),
+  });
+  const usage = useMemo<UsageMap>(() => {
+    const map: UsageMap = new Map();
+    for (const entry of usageQuery.data?.entries ?? []) {
+      map.set(originKey(entry.server, entry.tool), entry);
+    }
+    return map;
+  }, [usageQuery.data]);
+
+  const resetUsage = useMutation({
+    mutationFn: () => endpoints.resetGatewayUsage(),
+    onSuccess: () => {
+      message.success(t('tools.resetUsageDone'));
+      void queryClient.invalidateQueries({ queryKey: keys.gateway.usage() });
+    },
+    onError: (error: unknown) => {
+      message.error(error instanceof Error ? error.message : t('error.unknown'));
+    },
   });
 
   // The gateway's own tools come from the endpoint that reports what its
@@ -413,13 +535,13 @@ export default function Tools() {
 
     return named.map(({ name, view }) => ({
       server: name,
-      tools: buckets.get(name) ?? [],
+      tools: order === 'usage' ? byUsage(buckets.get(name) ?? [], usage) : (buckets.get(name) ?? []),
       view,
       // A server that contributed nothing sorts last under a search,
       // which is where a group with no answer in it belongs.
       rank: ranks.get(name) ?? Number.MAX_SAFE_INTEGER,
     }));
-  }, [tools.data, servers.data]);
+  }, [tools.data, servers.data, order, usage]);
 
   const shown = useMemo(() => {
     // Picking a server asks about that server, so the others go — empty
@@ -494,6 +616,15 @@ export default function Tools() {
           ]}
         />
         <span className={styles.spacer} />
+        <Segmented<ToolOrder>
+          value={order}
+          onChange={setOrder}
+          aria-label={t('tools.order')}
+          options={[
+            { label: t('tools.byName'), value: 'name' },
+            { label: t('tools.byUsage'), value: 'usage' },
+          ]}
+        />
         <Segmented<ToolLayout>
           value={layout}
           onChange={setLayout}
@@ -525,7 +656,7 @@ export default function Tools() {
               open={isOpen(SYSTEM_GROUP)}
               onToggle={() => toggleGroup(SYSTEM_GROUP)}
             >
-              <ToolGroup tools={shownSystem} layout={layout} onCall={setCalling} />
+              <ToolGroup tools={shownSystem} layout={layout} usage={usage} onCall={setCalling} />
             </Panel>
           ) : null}
 
@@ -571,11 +702,31 @@ export default function Tools() {
                   tools={group.tools}
                   view={group.view}
                   layout={layout}
+                  usage={usage}
                   onCall={setCalling}
                 />
               )}
             </Panel>
           ))}
+
+          {/* Where the counts come from and what they leave out, so that a
+              small number is not read as a small installation. Offered
+              only once there is something to reset. */}
+          {usageQuery.data && usageQuery.data.entries.length > 0 ? (
+            <p className={styles.usageNote}>
+              <span>{t('tools.usageSince', { since: fullTime(usageQuery.data.since) })}</span>
+              <Popconfirm
+                title={t('tools.resetUsage')}
+                okText={t('common.confirm')}
+                cancelText={t('common.cancel')}
+                onConfirm={() => resetUsage.mutate()}
+              >
+                <Button size="small" type="text" loading={resetUsage.isPending}>
+                  {t('tools.resetUsage')}
+                </Button>
+              </Popconfirm>
+            </p>
+          ) : null}
 
           {/* No group at all is the first-run case; no group shown while
               some exist means the search or the filter matched nothing.

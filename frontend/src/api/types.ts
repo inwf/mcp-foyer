@@ -271,6 +271,28 @@ export interface GatewayTools {
   systemTools: string[];
 }
 
+// ===== usage =====
+
+/** How the connected models have used one tool. Calls made from this
+ *  interface are not counted: the question is what a model reaches for. */
+export interface UsageEntry {
+  server: string;
+  tool: string;
+  /** How often search_tools returned it to a model, on the page it saw. */
+  searched: number;
+  /** How often a model called it, through call_tool or by its exposed name. */
+  called: number;
+  /** How many of those calls the tool reported as failed. */
+  failed: number;
+  lastCalled?: Timestamp;
+}
+
+export interface UsageSnapshot {
+  /** When counting began, or was last reset. */
+  since: Timestamp;
+  entries: UsageEntry[];
+}
+
 // ===== logs =====
 
 export const LOG_MODULES = [

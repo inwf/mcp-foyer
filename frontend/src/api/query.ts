@@ -41,6 +41,7 @@ export const keys = {
     status: () => [...keys.gateway.all, 'status'] as const,
     sessions: () => [...keys.gateway.all, 'sessions'] as const,
     tools: () => [...keys.gateway.all, 'tools'] as const,
+    usage: () => [...keys.gateway.all, 'usage'] as const,
   },
 
   logs: {
