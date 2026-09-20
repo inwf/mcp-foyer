@@ -92,6 +92,7 @@ func report(w io.Writer, paths config.Paths, cfgPath string, usingDefaults bool,
 	fmt.Fprintf(w, "config:     %s%s\n", cfgPath, configNote)
 	fmt.Fprintf(w, "log dir:    %s\n", paths.LogDir())
 	fmt.Fprintf(w, "log file:   %s\n", paths.LogFile())
+	fmt.Fprintf(w, "usage:      %s\n", paths.UsageFile())
 
 	fmt.Fprintf(w, "\nlisten:     %s:%d\n", cfg.Listen.Host, cfg.Listen.Port)
 	fmt.Fprintf(w, "log level:  %s\n", cfg.Logging.Level)

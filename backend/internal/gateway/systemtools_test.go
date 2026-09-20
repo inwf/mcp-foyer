@@ -90,7 +90,7 @@ func gatewayFixture(t *testing.T, ups gateway.Upstreams, cfgs gateway.Configs) *
 	// Nil own-tools: this fixture registers the tools on a bare server it
 	// does not own, so there is nothing to read them back off. Self
 	// description is a whole-gateway behaviour and is tested against one.
-	gateway.RegisterSystemTools(server, ups, cfgs, nil)
+	gateway.RegisterSystemTools(server, ups, cfgs, nil, nil)
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 

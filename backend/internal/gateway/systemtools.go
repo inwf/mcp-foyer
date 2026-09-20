@@ -56,6 +56,18 @@ type Configs interface {
 // schemas. It may be nil when registration is used outside a Gateway.
 type OwnTools func() []*mcp.Tool
 
+// Usage receives what the models connected to the gateway do with its
+// tools. A nil Usage counts nothing.
+//
+// It is an interface so that the gateway does not decide where counts
+// go; [usage.Counter] is the implementation the binary uses.
+type Usage interface {
+	// Searched is told of every hit search_tools returned to a model.
+	Searched(server, tool string)
+	// Called is told of every call a model made, and whether it failed.
+	Called(server, tool string, failed bool)
+}
+
 type listServersInput struct{}
 
 // ServerSummary describes one configured server.
@@ -138,7 +150,10 @@ const (
 // either leaves that model with half the rule. The same words are used
 // throughout: a tool is either "in this tool list" or not, which is the
 // only distinction a caller needs.
-func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own OwnTools) {
+func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own OwnTools, use Usage) {
+	if use == nil {
+		use = noUsage{}
+	}
 	mcp.AddTool(server, &mcp.Tool{
 		Name: ToolListServers,
 		Description: "Overview of the servers behind this gateway: each one's name, state, description, " +
@@ -162,6 +177,13 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 		out, err := searchTools(ups, cfgs, own, in)
 		if err != nil {
 			return toolError(err), searchToolsOutput{}, nil
+		}
+		// What the model saw is the page, not everything that matched.
+		// The gateway's own tools are not counted: they are always there.
+		if in.Server != Name {
+			for _, hit := range out.Hits {
+				use.Searched(hit.Server, hit.Tool)
+			}
 		}
 		return nil, out, nil
 	})
@@ -191,13 +213,19 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 			OpenWorldHint: boolPtr(true),
 		},
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in callToolInput) (*mcp.CallToolResult, any, error) {
-		result, err := callTool(ctx, ups, in)
+		result, err := callTool(ctx, ups, use, in)
 		if err != nil {
 			return toolError(err), nil, nil
 		}
 		return result, nil, nil
 	})
 }
+
+// noUsage counts nothing, for a gateway built without a counter.
+type noUsage struct{}
+
+func (noUsage) Searched(string, string)     {}
+func (noUsage) Called(string, string, bool) {}
 
 func listServers(ups Upstreams, cfgs Configs) listServersOutput {
 	cfg := cfgs.Get()
@@ -257,7 +285,7 @@ func describeTool(server string, tool *mcp.Tool, exposed string) getToolDetailsO
 	}
 }
 
-func callTool(ctx context.Context, ups Upstreams, in callToolInput) (*mcp.CallToolResult, error) {
+func callTool(ctx context.Context, ups Upstreams, use Usage, in callToolInput) (*mcp.CallToolResult, error) {
 	if err := requireServer(ups, in.Server); err != nil {
 		return nil, withSystemToolHint(err, in.Tool)
 	}
@@ -273,7 +301,11 @@ func callTool(ctx context.Context, ups Upstreams, in callToolInput) (*mcp.CallTo
 	if in.Args != nil {
 		args = in.Args
 	}
-	return ups.CallTool(ctx, in.Server, in.Tool, args)
+	// Counted from here: a call the gateway refused above never reached
+	// the tool and is not a use of it, but one the upstream failed is.
+	result, err := ups.CallTool(ctx, in.Server, in.Tool, args)
+	use.Called(in.Server, in.Tool, err != nil || (result != nil && result.IsError))
+	return result, err
 }
 
 // cachedTool finds a tool in the discovery cache, or nil.

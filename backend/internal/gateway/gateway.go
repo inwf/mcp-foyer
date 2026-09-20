@@ -33,6 +33,10 @@ type Options struct {
 	// intended for diagnosing protocol-level problems.
 	WireDebug bool
 
+	// Usage receives what connected models do with the tools. Nil counts
+	// nothing.
+	Usage Usage
+
 	// After overrides the timer used to coalesce notifications, for
 	// tests that cannot wait for it.
 	After func(time.Duration, func())
@@ -110,6 +114,9 @@ func New(opts Options) *Gateway {
 		registered:         map[string]string{},
 		publishedResources: map[string]string{},
 	}
+	if g.opts.Usage == nil {
+		g.opts.Usage = noUsage{}
+	}
 
 	g.server = mcp.NewServer(
 		&mcp.Implementation{
@@ -130,7 +137,7 @@ func New(opts Options) *Gateway {
 			HasResources: true,
 		})
 
-	RegisterSystemTools(g.server, opts.Upstreams, opts.Configs, g.SystemTools)
+	RegisterSystemTools(g.server, opts.Upstreams, opts.Configs, g.SystemTools, g.opts.Usage)
 
 	// Installed before anything can connect: a session that arrives before
 	// the middleware is in place would never be marked, and so would never
@@ -319,10 +326,12 @@ func (g *Gateway) forward(ctx context.Context, req *mcp.CallToolRequest) (*mcp.C
 		// error it never sees.
 		g.log.Debug("a forwarded call failed",
 			"tool", name, "server", route.Server, "upstreamTool", route.Tool, "error", err)
+		g.opts.Usage.Called(route.Server, route.Tool, true)
 		return toolError(err), nil
 	}
 	g.log.Debug("forwarded a call",
 		"tool", name, "server", route.Server, "upstreamTool", route.Tool)
+	g.opts.Usage.Called(route.Server, route.Tool, result != nil && result.IsError)
 	return result, nil
 }
 

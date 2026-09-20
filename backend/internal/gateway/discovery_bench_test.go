@@ -106,7 +106,7 @@ func benchmarkDirectory(b *testing.B, serverCount, toolCount int) *mcp.ClientSes
 		b.Fatal(err)
 	}
 	server := mcp.NewServer(&mcp.Implementation{Name: "benchmark", Version: "test"}, nil)
-	gateway.RegisterSystemTools(server, ups, configs, nil)
+	gateway.RegisterSystemTools(server, ups, configs, nil, nil)
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	ctx, cancel := context.WithCancel(b.Context())
 	b.Cleanup(cancel)

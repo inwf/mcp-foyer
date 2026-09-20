@@ -20,6 +20,7 @@ import (
 	"mcphub/internal/gateway"
 	"mcphub/internal/logging"
 	"mcphub/internal/upstream"
+	"mcphub/internal/usage"
 )
 
 // shutdownGrace is how long in-flight requests have to finish once the
@@ -164,6 +165,23 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 		return err
 	}
 
+	// The counts are a convenience, so a damaged file is logged and
+	// started over rather than being allowed to stop the gateway.
+	counts, err := usage.Open(usage.Options{
+		Path: paths.UsageFile(),
+		OnError: func(err error) {
+			cli.Warn("could not save the tool usage counts", "error", err)
+		},
+	})
+	if err != nil {
+		cli.Warn("starting the tool usage counts from zero", "error", err)
+	}
+	defer func() {
+		if err := counts.Flush(); err != nil {
+			cli.Warn("could not save the tool usage counts", "error", err)
+		}
+	}()
+
 	g := gateway.New(gateway.Options{
 		Version:   version,
 		Upstreams: ups,
@@ -171,6 +189,7 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 		Logger:    log.For(logging.ModuleGateway),
 		Gateway:   cfg.Gateway,
 		WireDebug: cfg.Logging.MCPWireDebug,
+		Usage:     counts,
 	})
 	g.Sync()
 	g.Watch(ctx, bus)
@@ -184,6 +203,7 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 		Upstreams: ups,
 		Gateway:   g,
 		Logs:      store,
+		Usage:     counts,
 		Bus:       bus,
 		WebUI:     opts.WebUI,
 	})

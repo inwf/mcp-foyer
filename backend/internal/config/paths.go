@@ -55,6 +55,9 @@ func (p Paths) LogDir() string { return filepath.Join(p.root, "logs") }
 // LogFile is the log currently being written.
 func (p Paths) LogFile() string { return filepath.Join(p.LogDir(), "mcphub.log") }
 
+// UsageFile holds the tool usage counts.
+func (p Paths) UsageFile() string { return filepath.Join(p.root, "usage.json") }
+
 // Ensure creates the directories mcphub writes into.
 func (p Paths) Ensure() error {
 	for _, dir := range []string{p.root, p.LogDir()} {
@@ -73,5 +76,6 @@ func (p Paths) All() map[string]string {
 		"config": p.ConfigFile(),
 		"logs":   p.LogDir(),
 		"log":    p.LogFile(),
+		"usage":  p.UsageFile(),
 	}
 }
