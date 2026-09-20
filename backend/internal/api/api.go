@@ -23,6 +23,7 @@ import (
 	"mcphub/internal/gateway"
 	"mcphub/internal/logging"
 	"mcphub/internal/upstream"
+	"mcphub/internal/usage"
 )
 
 // Route prefixes. These are constants because the middleware that
@@ -67,6 +68,10 @@ type Options struct {
 
 	// Logs is the in-memory log view the log endpoints query.
 	Logs *logging.Store
+
+	// Usage holds the tool usage counts. A nil counter leaves the usage
+	// endpoints reporting that nothing is counted.
+	Usage *usage.Counter
 
 	// Bus carries the events the WebSocket stream forwards to browsers.
 	// A nil bus leaves the endpoint serving clients that receive
@@ -253,6 +258,8 @@ func (a *API) registerRoutes(api gin.IRoutes) {
 	api.GET("/gateway/sessions", a.handleGatewaySessions)
 	api.GET("/gateway/tools", a.handleGatewayTools)
 	api.POST("/gateway/tools/:tool/call", a.handleCallGatewayTool)
+	api.GET("/gateway/usage", a.handleGatewayUsage)
+	api.DELETE("/gateway/usage", a.handleResetGatewayUsage)
 
 	// The log view.
 	api.GET("/logs", a.handleQueryLogs)
