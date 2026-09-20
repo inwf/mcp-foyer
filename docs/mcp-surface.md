@@ -38,6 +38,18 @@ resources。因此：
 - 系统工具的结构化输出同时以 JSON 文本放在 `content` 里（Go SDK 的规范
   fallback），只读 `content` 的客户端拿到的是完整结果。
 
+## 使用计数（对模型不可见）
+
+网关记录模型对每个工具的使用：`search_tools` 返回给模型的那一页里出现的次数、
+被调用的次数（`call_tool` 与按发布名直接调用两条路径合计）、其中失败的次数和
+最近一次调用时间。**这些数字不进入任何系统工具的返回，也不进 instructions**，
+它们是给 operator 看的，用来决定暴露哪些工具、改哪些描述。管理 API 与 Web 界面
+发起的调用不计入。被网关拒绝的调用（未知服务器、参数不符）也不计，因为它没有
+到达工具。
+
+读取：`GET /api/gateway/usage`；清零：`DELETE /api/gateway/usage`。数据在
+`data/usage.json`。
+
 ## 搜索参数与分页
 
 | 参数 | 规则 |

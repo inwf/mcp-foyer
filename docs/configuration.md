@@ -272,7 +272,13 @@ mcpServers:
 data/
   config.yaml
   logs/mcphub.log
+  usage.json
 ```
+
+`usage.json` 是工具使用计数：模型通过 `search_tools` 搜到、通过 `call_tool` 或
+发布名调用了哪些工具，各多少次、失败几次。改动后几秒内写一次，退出时再写一次；
+文件损坏时从零开始计并写一条警告，不影响启动。Web 界面的工具页显示这些数字并
+可清零，也可直接删掉这个文件。
 
 按以下顺序决定它的位置：
 

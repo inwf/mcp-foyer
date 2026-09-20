@@ -230,6 +230,7 @@ mcphub tools call search_tools --arg server=files --arg includeSchema=true --arg
 data/
   config.yaml       配置
   logs/mcphub.log   日志
+  usage.json        工具使用计数（模型搜到、调用了哪些工具）
 ```
 
 改用别处：`--data-dir /path` 或环境变量 `MCPHUB_DATA_DIR`。
