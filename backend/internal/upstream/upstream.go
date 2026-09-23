@@ -11,16 +11,16 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
-// clientName identifies mcphub to the servers it connects to.
-const clientName = "mcphub"
+// clientName identifies mcp-foyer to the servers it connects to.
+const clientName = "mcp-foyer"
 
 // ErrNotConnected is returned by operations that need a live session.
 var ErrNotConnected = errors.New("server is not connected")
 
-// Conn is mcphub's connection to a single upstream MCP server: the
+// Conn is mcp-foyer's connection to a single upstream MCP server: the
 // session, the cached view of what the server offers, and the status
 // reported to the API.
 //

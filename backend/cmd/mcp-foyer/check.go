@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 func newCheckCommand(global *globalOptions, stdout io.Writer) *cobra.Command {
@@ -86,7 +86,7 @@ func report(w io.Writer, paths config.Paths, cfgPath string, usingDefaults bool,
 		}
 	}
 
-	fmt.Fprintf(w, "mcphub %s\n\n", version)
+	fmt.Fprintf(w, "mcp-foyer %s\n\n", version)
 
 	fmt.Fprintf(w, "data dir:   %s\n", paths.Root())
 	fmt.Fprintf(w, "config:     %s%s\n", cfgPath, configNote)

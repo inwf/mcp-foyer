@@ -10,7 +10,7 @@ import (
 // table prints aligned columns.
 //
 // The output is meant to be read by a person, but a person is not the
-// only reader: a single space-padded layout is also what makes `mcphub
+// only reader: a single space-padded layout is also what makes `mcp-foyer
 // servers list | awk '{print $1}'` work, so the padding is spaces and
 // there are no box-drawing characters.
 type table struct {

@@ -8,21 +8,21 @@ import (
 
 // DataDirEnv names the environment variable that overrides the data
 // directory.
-const DataDirEnv = "MCPHUB_DATA_DIR"
+const DataDirEnv = "MCP_FOYER_DATA_DIR"
 
 // defaultDataDir is relative to the working directory, which keeps
-// everything mcphub writes next to the project it belongs to rather than
+// everything mcp-foyer writes next to the project it belongs to rather than
 // scattered through the user's home directory.
 const defaultDataDir = "data"
 
-// Paths locates every file mcphub writes at runtime. Everything lives
+// Paths locates every file mcp-foyer writes at runtime. Everything lives
 // under a single root so that removing one directory removes all state.
 type Paths struct {
 	root string
 }
 
 // ResolveDataDir determines the data directory, in order of precedence:
-// an explicit value (from a command-line flag), the MCPHUB_DATA_DIR
+// an explicit value (from a command-line flag), the MCP_FOYER_DATA_DIR
 // environment variable, then "data" under the working directory.
 //
 // The result is absolute, so later changes to the working directory
@@ -53,12 +53,12 @@ func (p Paths) ConfigFile() string { return filepath.Join(p.root, "config.yaml")
 func (p Paths) LogDir() string { return filepath.Join(p.root, "logs") }
 
 // LogFile is the log currently being written.
-func (p Paths) LogFile() string { return filepath.Join(p.LogDir(), "mcphub.log") }
+func (p Paths) LogFile() string { return filepath.Join(p.LogDir(), "mcp-foyer.log") }
 
 // UsageFile holds the tool usage counts.
 func (p Paths) UsageFile() string { return filepath.Join(p.root, "usage.json") }
 
-// Ensure creates the directories mcphub writes into.
+// Ensure creates the directories mcp-foyer writes into.
 func (p Paths) Ensure() error {
 	for _, dir := range []string{p.root, p.LogDir()} {
 		if err := os.MkdirAll(dir, configDirMode); err != nil {

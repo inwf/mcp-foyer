@@ -10,12 +10,12 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 	// Imported to ask the gateway what it actually does with an empty
 	// exposure list, rather than restating the rule here. Legal because
 	// this is the external test package: gateway depends on config, and
 	// config_test is not config.
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // The configuration reference was the one part of this project's account of
@@ -56,7 +56,7 @@ func TestTheConfigurationReferenceDocumentsEveryField(t *testing.T) {
 		// which is a better way to document them than a row each.
 		if !strings.Contains(doc, "`"+name+"`") {
 			t.Errorf("the configuration reference never mentions %q; someone "+
-				"configuring mcphub from that document cannot know the field exists", name)
+				"configuring mcp-foyer from that document cannot know the field exists", name)
 		}
 	}
 }

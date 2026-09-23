@@ -9,9 +9,9 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/events"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
 )
 
 // watching starts an API with an event bus and returns both.

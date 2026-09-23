@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // A caller that knows what it wants to pass often knows that better than

@@ -19,13 +19,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/gateway"
-	"mcphub/internal/logging"
-	"mcphub/internal/testmcp"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/logging"
+	"mcp-foyer/internal/testmcp"
+	"mcp-foyer/internal/upstream"
 )
 
 func TestMain(m *testing.M) {

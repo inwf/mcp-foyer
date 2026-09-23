@@ -20,7 +20,7 @@ export type ToolLayout = 'cards' | 'list';
 
 /** Named for the project so that it cannot collide with anything else
  *  served from the same origin. */
-const STORAGE_KEY = 'mcphub.tools.layout';
+const STORAGE_KEY = 'mcp-foyer.tools.layout';
 
 interface LayoutState {
   layout: ToolLayout;

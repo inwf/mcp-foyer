@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // The gateway's own tools belong to no upstream server, so the management

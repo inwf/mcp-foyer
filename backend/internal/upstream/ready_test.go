@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/testmcp"
 )
 
 // Some servers cannot answer the moment they are started. These are

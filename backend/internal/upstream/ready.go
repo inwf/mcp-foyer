@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // readyProbe waits for a child process to say it is ready.

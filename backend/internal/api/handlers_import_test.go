@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"mcphub/internal/api"
+	"mcp-foyer/internal/api"
 )
 
 // Importing is how an installation starts: someone already has a working

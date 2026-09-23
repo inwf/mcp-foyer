@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // Importing servers from another client's configuration.
@@ -240,10 +240,10 @@ func transportFor(declared string) (config.Transport, error) {
 		// Saying nothing and treating it as streamable HTTP would produce
 		// a server that fails to connect for reasons the message would not
 		// explain.
-		return "", fmt.Errorf("this gateway does not speak SSE to upstream servers; " +
+		return "", fmt.Errorf("mcp-foyer does not speak SSE to upstream servers; " +
 			"if the server also offers streamable HTTP, set the type to \"http\"")
 	default:
-		return "", fmt.Errorf("%q is not a transport this gateway knows; "+
+		return "", fmt.Errorf("%q is not a transport mcp-foyer knows; "+
 			"use \"stdio\" or \"http\"", declared)
 	}
 }

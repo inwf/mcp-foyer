@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // The shapes below name only the fields this command displays, for the
@@ -44,7 +44,7 @@ type sessionRow struct {
 
 // newStatusCommand reports on the instance that is running.
 //
-// There is deliberately no process id in the output. mcphub writes no pid
+// There is deliberately no process id in the output. mcp-foyer writes no pid
 // file, so the only pid this command could print is one it guessed — and
 // daemon management is not something it does. A number that looks like a
 // pid but might belong to another process is worse than no number at all:
@@ -54,7 +54,7 @@ func newStatusCommand(global *globalOptions, stdout io.Writer) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Report what the running gateway is doing",
+		Short: "Report what the running instance is doing",
 		Long: "Report on the running instance: which build it is, how long it has been\n" +
 			"up, how many servers it reached, how much it is offering clients, and\n" +
 			"which clients are connected.\n\n" +
@@ -102,7 +102,7 @@ func reportStatus(cmd *cobra.Command, hub *gatewayClient, stdout io.Writer) erro
 		hidden += count
 	}
 
-	fmt.Fprintf(stdout, "mcphub %s at %s\n\n", dash(health.Version), hub.base)
+	fmt.Fprintf(stdout, "mcp-foyer %s at %s\n\n", dash(health.Version), hub.base)
 
 	fmt.Fprintf(stdout, "uptime:     %s\n", uptime(health.UptimeSeconds))
 	fmt.Fprintf(stdout, "servers:    %d configured, %d connected, %d failed\n",
@@ -114,7 +114,7 @@ func reportStatus(cmd *cobra.Command, hub *gatewayClient, stdout io.Writer) erro
 	// command does not print the reason: an error message is a sentence,
 	// and `servers list` is where the sentences are.
 	if status.Servers.Failed > 0 {
-		fmt.Fprintf(stdout, "\n%d %s not connect; run \"mcphub servers list\" to see why\n",
+		fmt.Fprintf(stdout, "\n%d %s not connect; run \"mcp-foyer servers list\" to see why\n",
 			status.Servers.Failed, plural(status.Servers.Failed, "server did", "servers did"))
 	}
 

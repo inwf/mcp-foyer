@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/testmcp"
 )
 
 // TestMain lets this binary stand in for an upstream MCP server, which
@@ -334,7 +334,7 @@ func TestDefaultDataDirIsInTheWorkingDirectory(t *testing.T) {
 	}
 }
 
-// The hard constraint: nothing mcphub writes may escape the data
+// The hard constraint: nothing mcp-foyer writes may escape the data
 // directory. This asserts it on the paths the command actually reports,
 // not just on the ones a unit test knows to ask about.
 func TestEveryReportedPathIsInsideTheDataDir(t *testing.T) {
@@ -386,7 +386,7 @@ func TestStartupIsRecordedInTheLogFile(t *testing.T) {
 		t.Fatalf("exit code = %d\nstderr: %s", code, stderr)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "logs", "mcphub.log"))
+	data, err := os.ReadFile(filepath.Join(dir, "logs", "mcp-foyer.log"))
 	if err != nil {
 		t.Fatalf("read log file: %v", err)
 	}
@@ -409,7 +409,7 @@ func TestReportIsNotPollutedByLogOutput(t *testing.T) {
 	}
 }
 
-// Running mcphub with no subcommand serves, which is the behaviour the
+// Running mcp-foyer with no subcommand serves, which is the behaviour the
 // command tree has to preserve.
 //
 // Serving cannot be started here without binding a port, so this asserts

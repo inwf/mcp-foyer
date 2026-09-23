@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/testmcp"
 )
 
 // running starts the serve command on a port the operating system picks
@@ -500,7 +500,7 @@ func TestThePortFlagIsNotWrittenBackToTheConfiguration(t *testing.T) {
 	}
 }
 
-// Serving is what mcphub does with no subcommand, so both spellings have to
+// Serving is what mcp-foyer does with no subcommand, so both spellings have to
 // take the flag — including the one where it comes before the subcommand,
 // which cobra parses with the subcommand's own flag set.
 func TestThePortFlagWorksInEveryPositionThatServes(t *testing.T) {

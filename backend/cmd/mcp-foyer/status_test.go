@@ -8,9 +8,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/testmcp"
 )
 
 // `status` is the answer to "is it running, and what is it doing" — the
@@ -186,7 +186,7 @@ func TestStatusReportsThatNothingIsRunning(t *testing.T) {
 	if code != exitFailure {
 		t.Errorf("exit code = %d, want %d", code, exitFailure)
 	}
-	if !strings.Contains(stderr, "mcphub serve") {
+	if !strings.Contains(stderr, "mcp-foyer serve") {
 		t.Errorf("the message does not say how to start one:\n%s", stderr)
 	}
 }

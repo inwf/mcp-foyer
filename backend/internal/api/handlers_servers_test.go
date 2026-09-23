@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/upstream"
 )
 
 // twoServers is a configuration with something to list.

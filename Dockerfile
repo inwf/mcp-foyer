@@ -1,4 +1,4 @@
-# mcphub, built the way the Makefile builds it.
+# mcp-foyer, built the way the Makefile builds it.
 #
 # Three stages, because the two toolchains are only needed to build: the
 # frontend is built with Node, the binary with Go, and the image that
@@ -57,7 +57,7 @@ COPY --from=web /src/frontend/dist/ ./internal/webui/dist/
 ARG VERSION=docker
 RUN CGO_ENABLED=0 go build -tags webui \
     -ldflags "-s -w -X main.version=${VERSION}" \
-    -o /out/mcphub ./cmd/mcphub
+    -o /out/mcp-foyer ./cmd/mcp-foyer
 
 # ===== what runs =====
 
@@ -68,37 +68,37 @@ FROM alpine:3.21
 # in a bare alpine.
 #
 # nodejs and npm are here because the most common stdio upstreams are npx
-# packages, and a gateway that cannot spawn the servers people actually
+# packages, and an mcp-foyer that cannot spawn the servers people actually
 # configure would need a derived image before it was useful. This is the
 # one place this image is deliberately larger than it has to be.
 RUN apk add --no-cache ca-certificates tzdata nodejs npm
 
-# An unprivileged user, and the data directory owned by it. The gateway
+# An unprivileged user, and the data directory owned by it. mcp-foyer
 # writes its configuration and logs there, so ownership has to be set
 # before the volume is mounted over it — a named volume inherits the
 # ownership of the directory it covers.
-RUN addgroup -g 10001 mcphub \
- && adduser -u 10001 -G mcphub -s /bin/sh -D mcphub \
+RUN addgroup -g 10001 mcp-foyer \
+ && adduser -u 10001 -G mcp-foyer -s /bin/sh -D mcp-foyer \
  && mkdir -p /data \
- && chown -R mcphub:mcphub /data
+ && chown -R mcp-foyer:mcp-foyer /data
 
-COPY --from=build /out/mcphub /usr/local/bin/mcphub
+COPY --from=build /out/mcp-foyer /usr/local/bin/mcp-foyer
 # Mode set explicitly rather than inherited: a checkout on a filesystem
 # that does not carry the executable bit would otherwise produce an image
 # whose entrypoint cannot run.
-COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/mcphub-entrypoint
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/mcp-foyer-entrypoint
 
-USER mcphub
+USER mcp-foyer
 
-# Everything mcphub writes lives here: config.yaml, logs/. Kept out of
+# Everything mcp-foyer writes lives here: config.yaml, logs/. Kept out of
 # the image so that a rebuild does not discard a configuration.
-ENV MCPHUB_DATA_DIR=/data
+ENV MCP_FOYER_DATA_DIR=/data
 VOLUME ["/data"]
 
 EXPOSE 7788
 
 # The entrypoint seeds a first configuration and then execs this. See
-# docker/entrypoint.sh for why a container needs one at all: the gateway's
+# docker/entrypoint.sh for why a container needs one at all: mcp-foyer's
 # loopback-only default rejects everything that arrives through a published
 # port.
 #
@@ -110,5 +110,5 @@ EXPOSE 7788
 # Reaching the management API is still a deliberate act: the compose file
 # publishes to 127.0.0.1 on the host, and security.allowedNetworks still
 # has to admit the caller.
-ENTRYPOINT ["mcphub-entrypoint", "mcphub"]
+ENTRYPOINT ["mcp-foyer-entrypoint", "mcp-foyer"]
 CMD ["serve", "--host", "0.0.0.0", "--port", "7788"]

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mcphub/internal/guide"
+	"mcp-foyer/internal/guide"
 )
 
 func newGuideCommand(stdout io.Writer) *cobra.Command {
@@ -19,7 +19,7 @@ func newGuideCommand(stdout io.Writer) *cobra.Command {
 		Long: "Print the usage guide as Markdown.\n\n" +
 			"It is written to standard output unrendered, so it can be piped to a\n" +
 			"pager, saved to a file, or handed to an assistant that reads Markdown.\n\n" +
-			"The gateway also serves the same document as an MCP resource, so a model\n" +
+			"mcp-foyer also serves the same document as an MCP resource, so a model\n" +
 			"connected to it can read this without being handed the text.",
 		Args: noPositionalArgs,
 		RunE: func(*cobra.Command, []string) error {

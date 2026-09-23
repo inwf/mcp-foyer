@@ -17,7 +17,7 @@ import (
 const RequestIDHeader = "X-Request-Id"
 
 // requestIDKey is where the identifier is kept on the request context.
-const requestIDKey = "mcphub.requestID"
+const requestIDKey = "mcp-foyer.requestID"
 
 // maxSuppliedRequestIDLen bounds an identifier accepted from a client.
 const maxSuppliedRequestIDLen = 64

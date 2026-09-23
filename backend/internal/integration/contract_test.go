@@ -9,7 +9,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // ===== initialize =====
@@ -31,8 +31,8 @@ func TestInitializeHandshake(t *testing.T) {
 	if result.ServerInfo == nil {
 		t.Fatal("no server info was returned")
 	}
-	if result.ServerInfo.Name != "mcphub" {
-		t.Errorf("server name = %q, want mcphub", result.ServerInfo.Name)
+	if result.ServerInfo.Name != "mcp-foyer" {
+		t.Errorf("server name = %q, want mcp-foyer", result.ServerInfo.Name)
 	}
 	if result.ServerInfo.Version != "test" {
 		t.Errorf("server version = %q, want the version it was built with", result.ServerInfo.Version)

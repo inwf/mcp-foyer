@@ -1,7 +1,7 @@
 #!/bin/sh
 # Seed the data directory on a first start, then get out of the way.
 #
-# Why this exists at all: the gateway's own default allows loopback only,
+# Why this exists at all: mcp-foyer's own default allows loopback only,
 # which is right for a program on someone's machine and wrong inside a
 # container. Traffic published to the host does not arrive from loopback —
 # it arrives from the container network's gateway address — so a container
@@ -15,7 +15,7 @@
 
 set -eu
 
-CONFIG="${MCPHUB_DATA_DIR:-/data}/config.yaml"
+CONFIG="${MCP_FOYER_DATA_DIR:-/data}/config.yaml"
 
 if [ ! -e "$CONFIG" ]; then
     mkdir -p "$(dirname "$CONFIG")"
@@ -41,7 +41,7 @@ security:
   allowedNetworks: []
 YAML
 
-    echo "mcphub: wrote an initial $CONFIG" >&2
+    echo "mcp-foyer: wrote an initial $CONFIG" >&2
 fi
 
 exec "$@"

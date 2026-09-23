@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/gateway"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/upstream"
 )
 
 // defaultSearchLimit bounds a tool search that does not ask for a size.
@@ -230,12 +230,12 @@ func (a *API) handleCallGatewayTool(c *gin.Context) {
 	tool := c.Param("tool")
 
 	if a.opts.Gateway == nil {
-		fail(c, Unavailable("the gateway is not running"))
+		fail(c, Unavailable("the MCP endpoint is not running"))
 		return
 	}
 	if !gateway.IsSystemTool(tool) {
 		fail(c, NotFound(fmt.Sprintf(
-			"%q is not one of the gateway's own tools; a tool from a server is called "+
+			"%q is not one of mcp-foyer's own tools; a tool from a server is called "+
 				"through /servers/{server}/tools/{tool}/call", tool)))
 		return
 	}

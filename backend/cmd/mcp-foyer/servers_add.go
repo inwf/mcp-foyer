@@ -45,14 +45,14 @@ func newServersAddCommand(client *clientOptions, stdout io.Writer) *cobra.Comman
 
 	cmd := &cobra.Command{
 		Use:   "add <name> [-- command args...]",
-		Short: "Add a server to the running gateway's configuration",
-		Long: "Add a server. The change goes through the running gateway, which\n" +
+		Short: "Add a server to the running instance's configuration",
+		Long: "Add a server. The change goes through the running instance, which\n" +
 			"validates it, writes it to the configuration file and connects to it.\n\n" +
 			"A server that runs as a child process is given as a command after \"--\",\n" +
 			"which is where the shell stops interpreting flags:\n\n" +
-			"  mcphub servers add files -- npx -y @modelcontextprotocol/server-filesystem /tmp\n\n" +
+			"  mcp-foyer servers add files -- npx -y @modelcontextprotocol/server-filesystem /tmp\n\n" +
 			"A server that is already running somewhere is given as a URL:\n\n" +
-			"  mcphub servers add remote --url https://example.com/mcp\n\n" +
+			"  mcp-foyer servers add remote --url https://example.com/mcp\n\n" +
 			"The transport follows from which of the two was given, so it only has\n" +
 			"to be named with --transport when overriding that.",
 		Args: addArgs,
@@ -282,7 +282,7 @@ func reportWhenSettled(ctx context.Context, gateway *gatewayClient, stdout io.Wr
 		}
 
 		if time.Now().After(deadline) {
-			fmt.Fprintf(stdout, "still %s after %s; check \"mcphub servers list\"\n",
+			fmt.Fprintf(stdout, "still %s after %s; check \"mcp-foyer servers list\"\n",
 				dash(current.Status.State), wait)
 			return nil
 		}

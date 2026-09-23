@@ -6,7 +6,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // The configuration types describe the file on disk, so they carry yaml

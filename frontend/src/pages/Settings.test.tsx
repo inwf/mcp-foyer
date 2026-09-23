@@ -95,7 +95,7 @@ describe('the settings form', () => {
   it('offers the gateway and trace-context switches in their current state', async () => {
     editing();
 
-    const gateway = await screen.findByRole('switch', { name: /记录网关细节/ });
+    const gateway = await screen.findByRole('switch', { name: /记录 gateway 模块细节/ });
     const trace = screen.getByRole('switch', { name: /显示追踪标识/ });
 
     expect(gateway).toBeChecked();
@@ -132,7 +132,7 @@ describe('the settings form', () => {
     );
 
     await userEvent.click(await screen.findByRole('button', { name: /保存/ }));
-    expect(await screen.findByText(/需要重启网关才会生效/)).toBeInTheDocument();
+    expect(await screen.findByText(/需要重启 mcp-foyer 才会生效/)).toBeInTheDocument();
   });
 
   // The guard for the whole arrangement: a field the form does not

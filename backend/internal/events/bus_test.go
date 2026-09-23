@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/events"
+	"mcp-foyer/internal/events"
 )
 
 func receive(t *testing.T, ch <-chan events.Event) events.Event {

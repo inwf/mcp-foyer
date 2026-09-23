@@ -8,7 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // The gateway is two things at once: an MCP endpoint that clients call,

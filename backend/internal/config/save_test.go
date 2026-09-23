@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // populated returns a configuration with every section set to something

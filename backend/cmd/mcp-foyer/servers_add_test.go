@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"mcphub/internal/config"
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/testmcp"
 )
 
 // storedConfig is the server as the gateway persisted it. Reading it back
@@ -91,7 +91,7 @@ func TestServersAddCreatesAStdioServer(t *testing.T) {
 }
 
 // The command's own flags must reach the child rather than being eaten by
-// mcphub, which is the whole reason they go after "--".
+// mcp-foyer, which is the whole reason they go after "--".
 func TestServersAddPassesTheCommandArgumentsThrough(t *testing.T) {
 	base, stop, done := running(t, nil)
 	defer func() { stop(); <-done }()
@@ -99,7 +99,7 @@ func TestServersAddPassesTheCommandArgumentsThrough(t *testing.T) {
 
 	code, _, stderr := execute(t, "servers", "add", "flagged",
 		"--address", address, "--wait", "0",
-		"--", "some-command", "--verbose", "-y", "--url", "not-mcphubs-flag")
+		"--", "some-command", "--verbose", "-y", "--url", "not-our-flag")
 
 	if code != exitOK {
 		t.Fatalf("exit code = %d, want %d\nstderr: %s", code, exitOK, stderr)
@@ -109,7 +109,7 @@ func TestServersAddPassesTheCommandArgumentsThrough(t *testing.T) {
 	if stored.Command != "some-command" {
 		t.Errorf("command = %q, want %q", stored.Command, "some-command")
 	}
-	want := []string{"--verbose", "-y", "--url", "not-mcphubs-flag"}
+	want := []string{"--verbose", "-y", "--url", "not-our-flag"}
 	if strings.Join(stored.Args, " ") != strings.Join(want, " ") {
 		t.Errorf("args = %v, want %v", stored.Args, want)
 	}

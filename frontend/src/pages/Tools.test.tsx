@@ -588,7 +588,7 @@ describe('the layout toggle', () => {
     expect(useToolLayoutStore.getState().layout).toBe('list');
     // In the browser's storage, not the gateway's configuration: the
     // choice belongs to whoever is looking at the screen.
-    expect(localStorage.getItem('mcphub.tools.layout')).toContain('list');
+    expect(localStorage.getItem('mcp-foyer.tools.layout')).toContain('list');
   });
 });
 
@@ -679,7 +679,7 @@ describe('folding a group away', () => {
     // The name, not the position: a server's position shifts as others
     // are added and removed, while its name is what was recognised.
     expect(useToolCollapseStore.getState().collapsed).toEqual(['files']);
-    expect(localStorage.getItem('mcphub.tools.collapsed')).toContain('files');
+    expect(localStorage.getItem('mcp-foyer.tools.collapsed')).toContain('files');
   });
 
   // Searching is asking to see something. A group holding a match that

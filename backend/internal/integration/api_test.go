@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"testing"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/upstream"
 )
 
 // apiGet performs a management API request against the running stack.

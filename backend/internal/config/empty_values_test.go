@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // saveAndReload writes cfg and reads it back, which is the round trip

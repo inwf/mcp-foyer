@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // DefaultCapacity is how many records each buffer retains. Log history

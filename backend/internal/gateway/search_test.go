@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 func candidates() []gateway.Searchable {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 func TestParseLevel(t *testing.T) {
@@ -143,7 +143,7 @@ func TestRecordsReachEveryDestination(t *testing.T) {
 		Level:     slog.LevelInfo,
 		Stdout:    &out,
 		Store:     store,
-		FilePath:  filepath.Join(dir, "mcphub.log"),
+		FilePath:  filepath.Join(dir, "mcp-foyer.log"),
 		MaxSizeMB: 10,
 	})
 	if err != nil {
@@ -158,7 +158,7 @@ func TestRecordsReachEveryDestination(t *testing.T) {
 	if !strings.Contains(out.String(), "everywhere") {
 		t.Error("record missing from standard output")
 	}
-	fileText := readFile(t, filepath.Join(dir, "mcphub.log"))
+	fileText := readFile(t, filepath.Join(dir, "mcp-foyer.log"))
 	if !strings.Contains(fileText, "everywhere") {
 		t.Errorf("record missing from the log file:\n%s", fileText)
 	}
@@ -372,7 +372,7 @@ func TestConcurrentLogging(t *testing.T) {
 	log, err := logging.New(logging.Options{
 		Level:     slog.LevelInfo,
 		Store:     store,
-		FilePath:  filepath.Join(t.TempDir(), "mcphub.log"),
+		FilePath:  filepath.Join(t.TempDir(), "mcp-foyer.log"),
 		MaxSizeMB: 10,
 	})
 	if err != nil {

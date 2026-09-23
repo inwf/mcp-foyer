@@ -9,7 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // respond drives fail with err and returns what a client would receive.
@@ -70,7 +70,7 @@ func TestEveryCodeMapsToAStatus(t *testing.T) {
 	}
 }
 
-// A code this package does not know is a bug in mcphub, and reporting it
+// A code this package does not know is a bug in mcp-foyer, and reporting it
 // as a server fault is both accurate and louder than a 200 would be.
 func TestAnUnknownCodeIsAServerFault(t *testing.T) {
 	recorder, _ := respond(t, &Error{Code: Code("invented"), Message: "?"})

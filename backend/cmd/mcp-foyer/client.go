@@ -15,8 +15,8 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
 )
 
 // Most of the commands are clients of a running gateway rather than
@@ -47,7 +47,7 @@ type clientOptions struct {
 
 func (o *clientOptions) bind(flags *pflag.FlagSet) {
 	flags.StringVar(&o.address, "address", "",
-		"host:port of the running gateway (default: from the configuration)")
+		"host:port of the running instance (default: from the configuration)")
 }
 
 // gatewayClient reaches a running instance's management API.
@@ -157,7 +157,7 @@ func (c *gatewayClient) do(ctx context.Context, method, path string, body, out a
 		return nil
 	}
 	if err := json.NewDecoder(response.Body).Decode(out); err != nil {
-		return fmt.Errorf("the gateway at %s sent a response this build cannot read: %w", c.base, err)
+		return fmt.Errorf("mcp-foyer at %s sent a response this build cannot read: %w", c.base, err)
 	}
 	return nil
 }
@@ -171,19 +171,19 @@ func (c *gatewayClient) do(ctx context.Context, method, path string, body, out a
 func (c *gatewayClient) explainTransportFailure(err error) error {
 	var refused *net.OpError
 	if errors.As(err, &refused) && !errors.Is(err, context.DeadlineExceeded) {
-		return fmt.Errorf("no gateway is listening at %s — start one with \"mcphub serve\", "+
+		return fmt.Errorf("no mcp-foyer is listening at %s — start one with \"mcp-foyer serve\", "+
 			"or pass --address if it is somewhere else", c.base)
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
-		return fmt.Errorf("the gateway at %s did not answer within %s", c.base, clientTimeout)
+		return fmt.Errorf("mcp-foyer at %s did not answer within %s", c.base, clientTimeout)
 	}
 	// A URL error wraps the whole request; its message repeats the method
 	// and address, which the sentence above already says better.
 	var asURL *url.Error
 	if errors.As(err, &asURL) {
-		return fmt.Errorf("cannot reach the gateway at %s: %w", c.base, asURL.Err)
+		return fmt.Errorf("cannot reach mcp-foyer at %s: %w", c.base, asURL.Err)
 	}
-	return fmt.Errorf("cannot reach the gateway at %s: %w", c.base, err)
+	return fmt.Errorf("cannot reach mcp-foyer at %s: %w", c.base, err)
 }
 
 // explainRefusal reports what the gateway said it objected to, which is
@@ -191,7 +191,7 @@ func (c *gatewayClient) explainTransportFailure(err error) error {
 func (c *gatewayClient) explainRefusal(response *http.Response) error {
 	var envelope api.Envelope
 	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil || envelope.Error.Message == "" {
-		return fmt.Errorf("the gateway at %s answered %s", c.base, response.Status)
+		return fmt.Errorf("mcp-foyer at %s answered %s", c.base, response.Status)
 	}
 
 	message := envelope.Error.Message

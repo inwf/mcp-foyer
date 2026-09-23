@@ -6,7 +6,7 @@ import { fileURLToPath, URL } from 'node:url';
 // The gateway's own default. The dev server proxies to it so that the
 // UI runs against a real backend rather than a stand-in — the event
 // stream in particular is not worth faking.
-const BACKEND = process.env['MCPHUB_BACKEND'] ?? 'http://127.0.0.1:7788';
+const BACKEND = process.env['MCP_FOYER_BACKEND'] ?? 'http://127.0.0.1:7788';
 
 export default defineConfig({
   plugins: [react()],

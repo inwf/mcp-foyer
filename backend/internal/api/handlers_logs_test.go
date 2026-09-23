@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/api"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/logging"
 )
 
 type logsResponse struct {

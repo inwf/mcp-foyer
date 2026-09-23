@@ -174,7 +174,7 @@ export async function request<T>(
       code: 'unavailable',
       message: timedOut
         ? `请求超时（超过 ${Math.round(timeoutMs / 1000)} 秒）`
-        : '无法连接到网关，它可能没有在运行',
+        : '无法连接到 mcp-foyer，它可能没有在运行',
       status: 0,
     });
   }

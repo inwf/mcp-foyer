@@ -14,9 +14,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/gateway"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/upstream"
 )
 
 // fakeUpstreams stands in for the connection manager. The system tools
@@ -86,7 +86,7 @@ func (f *fakeUpstreams) ReadResource(_ context.Context, server, uri string) (*mc
 func gatewayFixture(t *testing.T, ups gateway.Upstreams, cfgs gateway.Configs) *mcp.ClientSession {
 	t.Helper()
 
-	server := mcp.NewServer(&mcp.Implementation{Name: "mcphub", Version: "test"}, nil)
+	server := mcp.NewServer(&mcp.Implementation{Name: "mcp-foyer", Version: "test"}, nil)
 	// Nil own-tools: this fixture registers the tools on a bare server it
 	// does not own, so there is nothing to read them back off. Self
 	// description is a whole-gateway behaviour and is tested against one.

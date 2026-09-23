@@ -2,6 +2,9 @@
 old-legacy/
 REFACTOR_PLAN.md
 
+# ===== Working plans (local notes, not part of the public repository) =====
+plans/
+
 # ===== Claude Code local state =====
 .claude/
 MEMORY.md
@@ -21,7 +24,7 @@ docker-compose.override.yml
 
 # ===== Go =====
 backend/bin/
-backend/mcphub
+backend/mcp-foyer
 *.test
 *.out
 coverage.out

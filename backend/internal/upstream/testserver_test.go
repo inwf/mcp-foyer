@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/testmcp"
 )
 
 // The tests in this package need a real MCP server on the other end of a

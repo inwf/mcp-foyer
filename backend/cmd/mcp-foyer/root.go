@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
-// globalOptions are the settings every command shares: where mcphub keeps
+// globalOptions are the settings every command shares: where mcp-foyer keeps
 // its files, and which configuration to read.
 type globalOptions struct {
 	DataDir    string
@@ -43,7 +43,7 @@ func (o *listenOverride) bind(cmd *cobra.Command) {
 }
 
 // from reads whichever of the two was actually typed. The command is the
-// one that ran, so `mcphub --port 9000` and `mcphub serve --port 9000` are
+// one that ran, so `mcp-foyer --port 9000` and `mcp-foyer serve --port 9000` are
 // each read from their own flag set.
 func (o *listenOverride) from(cmd *cobra.Command) (host *string, port *int) {
 	if cmd.Flags().Changed("host") {
@@ -72,22 +72,22 @@ func usagef(format string, args ...any) error {
 
 // newRootCommand builds the command tree.
 //
-// With no subcommand mcphub serves, because that is what it is for; the
+// With no subcommand mcp-foyer serves, because that is what it is for; the
 // subcommands are the things you occasionally want instead of that.
 func newRootCommand(stdout, stderr io.Writer, web fs.FS) *cobra.Command {
 	var global globalOptions
 	// One override shared by the two commands that listen, so that
-	// `mcphub --port 9000 serve` — where the flag is parsed by the
+	// `mcp-foyer --port 9000 serve` — where the flag is parsed by the
 	// subcommand it precedes — reaches the same place as either command's
 	// own flag.
 	var listen listenOverride
 
 	root := &cobra.Command{
-		Use:   "mcphub",
-		Short: "An MCP gateway: several upstream servers behind one endpoint",
-		Long: "mcphub proxies a set of configured upstream MCP servers behind a single\n" +
+		Use:   "mcp-foyer",
+		Short: "One MCP endpoint in front of several upstream servers",
+		Long: "mcp-foyer proxies a set of configured upstream MCP servers behind a single\n" +
 			"MCP endpoint, and serves a web interface for managing them.\n\n" +
-			"With no subcommand it starts the gateway.",
+			"With no subcommand it starts serving.",
 		Version: version,
 
 		// This package prints the errors and picks the exit code, so cobra
@@ -115,7 +115,7 @@ func newRootCommand(stdout, stderr io.Writer, web fs.FS) *cobra.Command {
 	// not ask for goes to standard error.
 	root.SetOut(stdout)
 	root.SetErr(stderr)
-	root.SetVersionTemplate("mcphub {{.Version}}\n")
+	root.SetVersionTemplate("mcp-foyer {{.Version}}\n")
 
 	// A flag the parser rejects is a usage problem like any other, and has
 	// to be wrapped to be recognised as one.
@@ -151,11 +151,11 @@ func newRootCommand(stdout, stderr io.Writer, web fs.FS) *cobra.Command {
 func newServeCommand(global *globalOptions, listen *listenOverride, web fs.FS, stdout, stderr io.Writer) *cobra.Command {
 	serve := &cobra.Command{
 		Use:   "serve",
-		Short: "Run the gateway until interrupted",
-		Long: "Run the gateway: connect to the configured upstream servers, serve the\n" +
+		Short: "Serve until interrupted",
+		Long: "Connect to the configured upstream servers and serve the\n" +
 			"aggregated MCP endpoint, the management API and the web interface.\n\n" +
-			"This is what mcphub does with no subcommand, so `mcphub` and\n" +
-			"`mcphub serve` are the same thing.\n\n" +
+			"This is what mcp-foyer does with no subcommand, so `mcp-foyer` and\n" +
+			"`mcp-foyer serve` are the same thing.\n\n" +
 			"--host and --port override listen.host and listen.port for this run\n" +
 			"without changing the configuration file.",
 		Args: noPositionalArgs,
@@ -173,7 +173,7 @@ func newVersionCommand(stdout io.Writer) *cobra.Command {
 		Short: "Print the version and exit",
 		Args:  noPositionalArgs,
 		RunE: func(*cobra.Command, []string) error {
-			fmt.Fprintf(stdout, "mcphub %s\n", version)
+			fmt.Fprintf(stdout, "mcp-foyer %s\n", version)
 			return nil
 		},
 	}

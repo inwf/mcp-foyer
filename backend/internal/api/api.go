@@ -18,12 +18,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/gateway"
-	"mcphub/internal/logging"
-	"mcphub/internal/upstream"
-	"mcphub/internal/usage"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/logging"
+	"mcp-foyer/internal/upstream"
+	"mcp-foyer/internal/usage"
 )
 
 // Route prefixes. These are constants because the middleware that
@@ -88,7 +88,7 @@ type Options struct {
 	Now func() time.Time
 }
 
-// API is the HTTP surface of mcphub.
+// API is the HTTP surface of mcp-foyer.
 type API struct {
 	opts    Options
 	log     *slog.Logger

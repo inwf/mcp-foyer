@@ -6,7 +6,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // SessionModeHeader lets a client state outright how it wants to be

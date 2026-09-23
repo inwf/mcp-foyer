@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // Code is a stable, machine-readable identifier for a class of failure.
@@ -45,7 +45,7 @@ const (
 	// that is not connected.
 	CodeUnavailable Code = "unavailable"
 
-	// CodeInternal is a fault in mcphub itself.
+	// CodeInternal is a fault in mcp-foyer itself.
 	CodeInternal Code = "internal"
 )
 
@@ -147,7 +147,7 @@ func Unavailable(message string) *Error {
 	return &Error{Code: CodeUnavailable, Message: message}
 }
 
-// Internal wraps a fault in mcphub. The message reaches the client; the
+// Internal wraps a fault in mcp-foyer. The message reaches the client; the
 // cause reaches the log only.
 func Internal(message string, cause error) *Error {
 	return &Error{Code: CodeInternal, Message: message, cause: cause}

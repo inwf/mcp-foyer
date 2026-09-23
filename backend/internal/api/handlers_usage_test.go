@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"mcphub/internal/api"
-	"mcphub/internal/usage"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/usage"
 )
 
 func TestUsageIsReported(t *testing.T) {

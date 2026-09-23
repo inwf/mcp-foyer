@@ -14,9 +14,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/goccy/go-yaml"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 func TestMain(m *testing.M) {

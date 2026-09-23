@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 func entry(at time.Time, level slog.Level, msg, module, server string) logging.Entry {

@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/logging"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/logging"
+	"mcp-foyer/internal/upstream"
 )
 
 // managerFixture builds a manager wired to a bus and a log store.

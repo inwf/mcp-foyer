@@ -9,14 +9,14 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/guide"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/guide"
+	"mcp-foyer/internal/upstream"
 )
 
 // resourcePrefix begins every URI the gateway hands out. Its own scheme
 // keeps gateway resources distinguishable from the upstream ones they
 // stand for.
-const resourcePrefix = "hub://servers/"
+const resourcePrefix = "foyer://servers/"
 
 // GuideResourceURI is the usage guide, served so that a model can read how
 // to use this gateway without anyone pasting the text into its context.
@@ -24,7 +24,7 @@ const resourcePrefix = "hub://servers/"
 // It is spelled "guide" rather than "use-guide" to match the CLI command
 // that prints the same document. A URI naming something that appears
 // nowhere in the interface would be a third name for one thing.
-const GuideResourceURI = "hub://guide"
+const GuideResourceURI = "foyer://guide"
 
 // guideResource describes the guide. It is always present: it depends on
 // nothing outside the binary, and a client that can reach the gateway at
@@ -33,9 +33,9 @@ func guideResource() *mcp.Resource {
 	return &mcp.Resource{
 		URI:      GuideResourceURI,
 		Name:     "guide",
-		Title:    "mcphub usage guide",
+		Title:    "mcp-foyer usage guide",
 		MIMEType: guide.MIMEType,
-		Description: "How to use this gateway: what its own tools are for, how upstream " +
+		Description: "How to use this endpoint: what its own tools are for, how upstream " +
 			"tools are named, and how to reach a tool that is not in tools/list.",
 	}
 }

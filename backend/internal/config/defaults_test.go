@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 func TestDefaultListensOnLoopback(t *testing.T) {

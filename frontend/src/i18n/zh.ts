@@ -8,8 +8,8 @@
  */
 export const zh = {
   app: {
-    name: 'MCPHUB',
-    tagline: 'MCP 网关控制台',
+    name: 'MCP Foyer',
+    tagline: 'MCP 聚合端点控制台',
     workspace: '工作空间',
     manage: '管理',
     instance: '当前实例',
@@ -29,7 +29,7 @@ export const zh = {
     open: '已连接',
     connecting: '连接中',
     closed: '已断开',
-    hint: '与网关的事件流连接',
+    hint: '与 mcp-foyer 的事件流连接',
     retrying: '正在重连…',
   },
 
@@ -42,8 +42,8 @@ export const zh = {
 
   overview: {
     title: '总览',
-    description: '上游连接、工具与会话，一眼了解网关的运行状态。',
-    metrics: '网关运行统计',
+    description: '上游连接、工具与会话，一眼了解 mcp-foyer 的运行状态。',
+    metrics: '运行统计',
     upstreams: '上游服务器',
     manageServers: '管理服务器',
     viewAll: '查看全部',
@@ -51,7 +51,7 @@ export const zh = {
     connectHint: '在 MCP 客户端中选择 Streamable HTTP，使用下方地址连接。',
     endpoint: 'MCP 接入地址',
     copyEndpoint: '复制地址',
-    endpointHint: '客户端只需配置这个入口，即可使用网关提供的工具。',
+    endpointHint: '客户端只需配置这个入口，即可使用 mcp-foyer 提供的工具。',
     toolsHint: '客户端可发现',
     failureCount: '{{count}} 台连接失败',
     viewLogs: '查看日志',
@@ -64,7 +64,7 @@ export const zh = {
     sessionMode: '会话模式',
     activity: '最近事件',
     noActivity: '暂无事件',
-    noActivityHint: '网关运行期间发生的变化会出现在这里',
+    noActivityHint: '运行期间发生的变化会出现在这里',
     uptime: '运行时长',
     version: '版本',
   },
@@ -123,7 +123,7 @@ export const zh = {
     secretsHint:
       '导出的文件里密钥是 ******** 占位符。导入到同一台实例时，已存在的服务器会保留原来的密钥；这台实例上没有的服务器则会把占位符当成真值存下来，需要事后重填。',
     replace: '替换配置',
-    rejected: '网关拒绝了这份配置，下面是逐项原因',
+    rejected: 'mcp-foyer 拒绝了这份配置，下面是逐项原因',
     notADocument: '这不是一份配置文档（顶层要是一个映射）',
     done: '已导入，共 {{count}} 处变化',
   },
@@ -215,7 +215,7 @@ export const zh = {
     schema: '参数结构',
     system: '系统工具',
     fromServers: '服务器工具',
-    builtIn: '网关自带',
+    builtIn: '内置',
     groupEmpty: '没有工具',
     groupDisabled: '这台服务器已停用，启用之后它的工具才能被暴露',
     groupFailed: '连接失败，所以拿不到工具列表 —— 状态上悬停可以看到原因',
@@ -269,7 +269,7 @@ export const zh = {
 
   logs: {
     title: '日志',
-    description: '按级别、模块和服务器筛选，追踪网关的运行记录。',
+    description: '按级别、模块和服务器筛选，追踪运行记录。',
     stream: '日志记录',
     level: '级别',
     module: '模块',
@@ -292,8 +292,8 @@ export const zh = {
 
   settings: {
     title: '设置',
-    description: '调整网关的监听地址、访问规则与运行参数。',
-    listenHint: '网关对外提供服务的地址。修改后需要重启生效。',
+    description: '调整监听地址、访问规则与运行参数。',
+    listenHint: 'mcp-foyer 对外提供服务的地址。修改后需要重启生效。',
     loggingHint: '控制记录哪些信息，以及日志文件的保留方式。',
     securityHint: '设置允许访问的来源，以及连接和并发限制。',
     gatewayHint: '管理客户端会话、通知与连接保活。',
@@ -310,7 +310,7 @@ export const zh = {
     listen: '监听',
     logging: '日志',
     security: '安全',
-    gateway: '网关',
+    gateway: '会话',
     startup: '启动',
     host: '主机',
     port: '端口',
@@ -321,8 +321,8 @@ export const zh = {
     maxSizeMB: '单文件上限（MB）',
     mcpWireDebug: '记录 MCP 报文',
     apiDebug: '记录 API 细节',
-    gatewayDebug: '记录网关细节',
-    gatewayDebugHint: '只把网关这一层调到 debug，不影响其它模块',
+    gatewayDebug: '记录 gateway 模块细节',
+    gatewayDebugHint: '只把 gateway 模块调到 debug，也就是面向客户端的 MCP 这一层，不影响其它模块',
     showTraceContext: '显示追踪标识',
     showTraceContextHint: '在日志行里带上 requestId / session，关掉只是行更短，日志页仍然保留',
     allowedNetworks: '允许的网段',
@@ -347,18 +347,18 @@ export const zh = {
     maxRetries: '最大重试次数',
     retryBackoff: '重试退避',
     saved: '配置已保存',
-    restartNeeded: '监听地址的改动需要重启网关才会生效',
+    restartNeeded: '监听地址的改动需要重启 mcp-foyer 才会生效',
     invalidYaml: 'YAML 无法解析',
   },
 
   error: {
     title: '出错了',
-    offline: '无法连接到网关',
+    offline: '无法连接到 mcp-foyer',
     offlineHint: '它可能没有在运行。启动后本页会自动恢复。',
     notFound: '找不到该页面',
     staleCode: '页面代码已过期',
     staleCodeHint:
-      '网关可能在这个标签页打开期间重新构建过，本页依赖的代码已经不存在了。重新加载即可恢复。',
+      'mcp-foyer 可能在这个标签页打开期间重新构建过，本页依赖的代码已经不存在了。重新加载即可恢复。',
     reload: '重新加载',
     retry: '重试',
     back: '返回',

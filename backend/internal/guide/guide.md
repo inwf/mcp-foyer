@@ -1,6 +1,6 @@
-# mcphub 使用指南
+# mcp-foyer 使用指南
 
-mcphub 是一个 MCP 网关：它连上若干个上游 MCP 服务器，把它们的工具与资源
+mcp-foyer 是一个 MCP 聚合端点：它连上若干个上游 MCP 服务器，把它们的工具与资源
 合并成**一个** MCP 端点对外提供。客户端只需要配置一次，之后增删上游都不用
 再动客户端。
 
@@ -9,7 +9,7 @@ mcphub 是一个 MCP 网关：它连上若干个上游 MCP 服务器，把它们
 - [启动](#启动)
 - [把客户端接上来](#把客户端接上来)
 - [添加上游服务器](#添加上游服务器)
-- [网关自带的系统工具](#网关自带的系统工具)
+- [自带的系统工具](#自带的系统工具)
 - [会话模式](#会话模式)
 - [文件放在哪](#文件放在哪)
 - [命令速查](#命令速查)
@@ -17,10 +17,10 @@ mcphub 是一个 MCP 网关：它连上若干个上游 MCP 服务器，把它们
 ## 启动
 
 ```
-mcphub serve
+mcp-foyer serve
 ```
 
-不带子命令的 `mcphub` 与 `mcphub serve` 等价。默认监听 `127.0.0.1:7788`，
+不带子命令的 `mcp-foyer` 与 `mcp-foyer serve` 等价。默认监听 `127.0.0.1:7788`，
 一个端口同时提供三样东西：
 
 | 路径   | 用途                                  |
@@ -35,7 +35,7 @@ mcphub serve
 只想换一次地址，不动配置文件：
 
 ```
-mcphub serve --port 9000
+mcp-foyer serve --port 9000
 ```
 
 `--host` / `--port` 压过 `listen.host` / `listen.port`，**只影响本次运行**。
@@ -43,18 +43,18 @@ mcphub serve --port 9000
 `--host` 设成回环之外的地址，等于把管理 API 也一起暴露出去——它能改变哪些命令
 会被当作子进程执行，所以那应当是一个明确的决定。
 
-改配置前可以先离线检查一遍，这一步不需要网关在跑：
+改配置前可以先离线检查一遍，这一步不需要 mcp-foyer 在跑：
 
 ```
-mcphub config validate
+mcp-foyer config validate
 ```
 
 ## 把客户端接上来
 
-mcphub 对外说的是 **streamable HTTP**。以 Claude Code 为例：
+mcp-foyer 对外说的是 **streamable HTTP**。以 Claude Code 为例：
 
 ```
-claude mcp add --transport http mcphub http://127.0.0.1:7788/mcp
+claude mcp add --transport http mcp-foyer http://127.0.0.1:7788/mcp
 ```
 
 其他客户端如果只认 JSON 配置，写成这样：
@@ -62,7 +62,7 @@ claude mcp add --transport http mcphub http://127.0.0.1:7788/mcp
 ```json
 {
   "mcpServers": {
-    "mcphub": {
+    "mcp-foyer": {
       "type": "http",
       "url": "http://127.0.0.1:7788/mcp"
     }
@@ -73,19 +73,19 @@ claude mcp add --transport http mcphub http://127.0.0.1:7788/mcp
 上游服务器的工具会以 `服务器名_工具名` 的形式暴露出来（例如 `files_read`），
 所以两台服务器各有一个 `read` 也不会撞名。
 
-**但默认一个上游工具都不暴露。** 客户端一开始只看到网关自己的四个系统工具，
+**但默认一个上游工具都不暴露。** 客户端一开始只看到 mcp-foyer 自己的四个系统工具，
 上游工具要在配置里逐个点名（`mcpServers.<名字>.exposedTools`，Web 界面的工具页
 每个工具有一个开关）才会进入 `tools/list`。
 
 这是有意的：上游的 schema 很占地方，一台服务器十几个工具、每个十几个参数，
 全塞进每个客户端的上下文就是纯浪费。**没暴露不等于用不了**——模型可以用
 `search_tools` 找、`get_tool_details` 取 schema、`call_tool` 调，需要时才付这份 token。
-把常用的几个暴露出来、其余留给按需检索，是这个网关想要的用法。
+把常用的几个暴露出来、其余留给按需检索，是 mcp-foyer 想要的用法。
 
 想看有哪些还没暴露：
 
 ```
-mcphub tools list --all
+mcp-foyer tools list --all
 ```
 
 ## 添加上游服务器
@@ -94,19 +94,19 @@ mcphub tools list --all
 
 | `transport`       | 含义                                     |
 | ----------------- | ---------------------------------------- |
-| `stdio`           | 由 mcphub 拉起一个子进程，走它的标准输入输出 |
+| `stdio`           | 由 mcp-foyer 拉起一个子进程，走它的标准输入输出 |
 | `streamable-http` | 连接一个已经跑在别处的服务                 |
 
-拉起子进程的写法——命令放在 `--` 之后，这样它自己的参数不会被 mcphub 抢走：
+拉起子进程的写法——命令放在 `--` 之后，这样它自己的参数不会被 mcp-foyer 抢走：
 
 ```
-mcphub servers add files -- npx -y @modelcontextprotocol/server-filesystem /tmp
+mcp-foyer servers add files -- npx -y @modelcontextprotocol/server-filesystem /tmp
 ```
 
 连接已有服务的写法：
 
 ```
-mcphub servers add remote --url https://example.com/mcp \
+mcp-foyer servers add remote --url https://example.com/mcp \
   --header "Authorization=Bearer <token>"
 ```
 
@@ -129,12 +129,12 @@ mcphub servers add remote --url https://example.com/mcp \
 改完之后：
 
 ```
-mcphub servers list
+mcp-foyer servers list
 ```
 
-## 网关自带的系统工具
+## 自带的系统工具
 
-mcphub 提供四个系统工具，按需发现上游能力。默认的 `tools/list` 只包含这四个，
+mcp-foyer 提供四个系统工具，按需发现上游能力。默认的 `tools/list` 只包含这四个，
 配置 `exposedTools` 后还会包含被选中的上游工具。
 
 | 工具 | 用途 |
@@ -176,18 +176,18 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 搜索结果和工具详情都用 `server` + `tool` 标识工具；`exposed` 是可直接调用的
 对外名，未暴露时为空。结果按 `score` 排序；`matched` 是命中的查询词数，只供参考。
 
-网关自己的工具直接调用。要查看它们，用 `server="mcphub"`：
+mcp-foyer 自己的工具直接调用。要查看它们，用 `server="mcp-foyer"`：
 
 ```text
-search_tools(server="mcphub")
-get_tool_details(server="mcphub", tool="call_tool")
+search_tools(server="mcp-foyer")
+get_tool_details(server="mcp-foyer", tool="call_tool")
 ```
 
-`call_tool` 只转发到配置中的上游，不调用网关自己的系统工具。上游工具即使也叫
+`call_tool` 只转发到配置中的上游，不调用 mcp-foyer 自己的系统工具。上游工具即使也叫
 `search_tools` 或 `call_tool`，照样按指定的上游服务器转发。
 
 `call_tool` 在转发前会把 `args` 对照该工具缓存的输入 schema 校验一遍：缺
-required 字段、类型不对，会在网关这里以可读的错误返回，不走一趟上游。网关判断
+required 字段、类型不对，会在 mcp-foyer 这里以可读的错误返回，不走一趟上游。它判断
 不了的情况一律放行，由上游裁决：缓存里还没有这个工具（列表变更通知可能滞后）、
 schema 解析不了、schema 声明了校验器不支持的版本。
 
@@ -195,15 +195,15 @@ schema 解析不了、schema 声明了校验器不支持的版本。
 的 description 各自把规则说全。`list_servers` 只报数量不报工具名，上百台服务器时
 概览不能变成目录；看一台服务器有什么，用 `search_tools(server="名字")`。
 
-资源 `hub://guide` 是本文；`hub://servers/{名字}` 返回服务器的状态、描述及全部
+资源 `foyer://guide` 是本文；`foyer://servers/{名字}` 返回服务器的状态、描述及全部
 工具的「名字 → 描述」映射。不需要参数 schema 时，一次读取就能了解一台服务器。
 
 这四个工具在 CLI 和 Web 中单独成组，也可以直接调用：
 
 ```text
-mcphub tools show search_tools
-mcphub tools call list_servers
-mcphub tools call search_tools --arg server=files --arg includeSchema=true --arg limit=2
+mcp-foyer tools show search_tools
+mcp-foyer tools call list_servers
+mcp-foyer tools call search_tools --arg server=files --arg includeSchema=true --arg limit=2
 ```
 
 服务器描述可在 Web 或配置文件中编辑。
@@ -217,7 +217,7 @@ mcphub tools call search_tools --arg server=files --arg includeSchema=true --arg
 选择顺序是：客户端请求头 `X-MCP-Session-Mode` > 配置里按 User-Agent 匹配的
 `gateway.sessionModeRules` > `gateway.defaultSessionMode`。
 
-**一条注意事项**：`gateway.keepAlive` 开启时，网关会周期性地向客户端发 MCP
+**一条注意事项**：`gateway.keepAlive` 开启时，mcp-foyer 会周期性地向客户端发 MCP
 `ping`。这要求客户端维持那条可选的 SSE 长连接（`GET /mcp`）。绝大多数客户端
 ——包括 Claude Code——默认就会维持它。若你的客户端明确关掉了这条流，请把
 `gateway.keepAlive` 设为 `0`，否则它的会话会被判定为失联而关闭。
@@ -229,42 +229,42 @@ mcphub tools call search_tools --arg server=files --arg includeSchema=true --arg
 ```
 data/
   config.yaml       配置
-  logs/mcphub.log   日志
+  logs/mcp-foyer.log   日志
   usage.json        工具使用计数（模型搜到、调用了哪些工具）
 ```
 
-改用别处：`--data-dir /path` 或环境变量 `MCPHUB_DATA_DIR`。
+改用别处：`--data-dir /path` 或环境变量 `MCP_FOYER_DATA_DIR`。
 只想换配置文件：`--config /path/to/config.yaml`。
 
 想确认到底读了哪些路径：
 
 ```
-mcphub check
+mcp-foyer check
 ```
 
 ## 命令速查
 
 ```
-mcphub serve                        启动网关（不带子命令时的默认动作）
-mcphub serve --host H --port N      换一次监听地址，不写回配置文件
-mcphub check                        校验配置并报告各项路径，不监听端口
-mcphub config validate [file]       离线检查配置，一次报出全部问题
+mcp-foyer serve                        启动服务（不带子命令时的默认动作）
+mcp-foyer serve --host H --port N      换一次监听地址，不写回配置文件
+mcp-foyer check                        校验配置并报告各项路径，不监听端口
+mcp-foyer config validate [file]       离线检查配置，一次报出全部问题
 
-mcphub servers list [--verbose]     列出服务器与各自状态
-mcphub servers add <name> ...       添加服务器
-mcphub status                       运行中实例的概况：连上了几台、在提供什么、谁连着
+mcp-foyer servers list [--verbose]     列出服务器与各自状态
+mcp-foyer servers add <name> ...       添加服务器
+mcp-foyer status                       运行中实例的概况：连上了几台、在提供什么、谁连着
 
-mcphub tools list [--search 词]     列出/搜索网关提供的工具
-mcphub tools list --all             连没暴露的一起列，并标出各自的对外名字
-mcphub tools show <工具>            看一个工具的完整说明与输入 schema
-mcphub tools call <工具> --arg k=v  调用一个工具
+mcp-foyer tools list [--search 词]     列出/搜索 mcp-foyer 提供的工具
+mcp-foyer tools list --all             连没暴露的一起列，并标出各自的对外名字
+mcp-foyer tools show <工具>            看一个工具的完整说明与输入 schema
+mcp-foyer tools call <工具> --arg k=v  调用一个工具
 
-mcphub ui [--print]                 用浏览器打开 Web 界面
-mcphub guide                        输出本文档
-mcphub version                      输出版本
+mcp-foyer ui [--print]                 用浏览器打开 Web 界面
+mcp-foyer guide                        输出本文档
+mcp-foyer version                      输出版本
 ```
 
-以 `servers`、`tools` 开头的命令，以及 `mcphub status` 与 `mcphub ui`，
+以 `servers`、`tools` 开头的命令，以及 `mcp-foyer status` 与 `mcp-foyer ui`，
 都是**运行中实例的客户端**——它们通过管理 API 询问那个实例，因为只有它知道自己
 实际连上了哪些上游。默认从配置里的 `listen` 取地址，也可以用
 `--address host:port` 指定。

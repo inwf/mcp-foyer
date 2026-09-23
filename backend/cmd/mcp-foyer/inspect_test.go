@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // ===== tools show =====
@@ -67,7 +67,7 @@ func TestToolsShowWorksForTheGatewaysOwnTools(t *testing.T) {
 	}
 	// A gateway tool is forwarded from nowhere. Printing a blank or a dash
 	// under a "server" heading would leave a reader wondering which one.
-	if !strings.Contains(stdout, "the gateway itself") {
+	if !strings.Contains(stdout, "mcp-foyer itself") {
 		t.Errorf("the output does not say where the tool comes from:\n%s", stdout)
 	}
 	if !strings.Contains(stdout, "server") {

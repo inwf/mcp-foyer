@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 func TestCloneIsDeep(t *testing.T) {

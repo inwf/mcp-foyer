@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 // router builds an API and returns its handler, so that a test can

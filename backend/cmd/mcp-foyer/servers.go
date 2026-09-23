@@ -67,7 +67,7 @@ func newServersListCommand(client *clientOptions, stdout io.Writer) *cobra.Comma
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List the configured servers and what each is doing",
-		Long: "List the configured servers as the running gateway sees them: whether it\n" +
+		Long: "List the configured servers as the running instance sees them: whether it\n" +
 			"reached each one, and how many tools and resources each is offering.\n\n" +
 			"This asks the running instance rather than reading the configuration,\n" +
 			"because only the instance knows which servers it actually reached.",

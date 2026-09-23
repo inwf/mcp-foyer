@@ -13,10 +13,10 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/guide"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/guide"
+	"mcp-foyer/internal/upstream"
 )
 
 // Options configures a [Gateway].
@@ -48,15 +48,15 @@ type Options struct {
 // Not every client shows a model these instructions, so each tool's own
 // description repeats what it needs; this is the version for clients
 // that do, and it says the same things in the same words.
-const instructions = `This gateway stands in front of several MCP servers. This tool list holds the gateway's four own tools plus whichever server tools the operator chose to list; most server tools are not in this list and are reached through the four.
+const instructions = `This endpoint stands in front of several MCP servers. This tool list holds its four own tools plus whichever server tools the operator chose to list; most server tools are not in this list and are reached through the four.
 
 To find a capability: search_tools(query). To see what one server offers: search_tools(server); list_servers gives every server with its state and tool count. Search covers tools whether or not they are in this list. Add includeSchema=true to get each hit's input schema in the same result, or ask get_tool_details(server, tool) for one tool's schema.
 
 To use a tool: call_tool(server, tool, args). The arguments are checked against the tool's schema before forwarding. When server, tool and arguments are already known, call without searching first. A server tool that is in this list can also be called by its listed name.
 
-The four own tools — list_servers, search_tools, get_tool_details, call_tool — are called directly, never through call_tool. Pass server="mcphub" to search_tools or get_tool_details to inspect them.
+The four own tools — list_servers, search_tools, get_tool_details, call_tool — are called directly, never through call_tool. Pass server="mcp-foyer" to search_tools or get_tool_details to inspect them.
 
-For clients that read resources, hub://guide is the full usage guide.`
+For clients that read resources, foyer://guide is the full usage guide.`
 
 // Gateway is the single MCP endpoint clients connect to. It exposes the
 // gateway's own tools plus every tool of every connected upstream
@@ -122,7 +122,7 @@ func New(opts Options) *Gateway {
 		&mcp.Implementation{
 			Name:    Name,
 			Version: opts.Version,
-			Title:   "MCP Hub",
+			Title:   "MCP Foyer",
 		},
 		&mcp.ServerOptions{
 			Logger:       log,
@@ -387,7 +387,7 @@ func (g *Gateway) readResource(ctx context.Context, req *mcp.ReadResourceRequest
 
 	server, upstreamURI, ok := ParseResourceURI(uri)
 	if !ok {
-		return nil, fmt.Errorf("resource %q does not belong to this gateway", uri)
+		return nil, fmt.Errorf("resource %q does not belong to this endpoint", uri)
 	}
 
 	// No upstream URI means the caller asked about the server itself.
@@ -397,7 +397,7 @@ func (g *Gateway) readResource(ctx context.Context, req *mcp.ReadResourceRequest
 	return g.opts.Upstreams.ReadResource(ctx, server, upstreamURI)
 }
 
-// serverDescription is what a client reads from hub://servers/{name}.
+// serverDescription is what a client reads from foyer://servers/{name}.
 // Descriptions are the operator's text; missing descriptions add no prose.
 type serverDescription struct {
 	upstream.Status

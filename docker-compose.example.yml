@@ -1,4 +1,4 @@
-# mcphub, one container. This is the template; copy it before starting.
+# mcp-foyer, one container. This is the template; copy it before starting.
 #
 #   cp docker-compose.example.yml docker-compose.yml
 #   docker compose up -d          start it
@@ -14,15 +14,15 @@
 # that nobody else wants.
 
 services:
-  mcphub:
+  mcp-foyer:
     build:
       context: .
       args:
-        # Shows up in `mcphub version`, the startup line and the web
+        # Shows up in `mcp-foyer version`, the startup line and the web
         # interface. Override with `VERSION=v1.2.3 docker compose build`.
         VERSION: ${VERSION:-docker}
-    image: mcphub:local
-    container_name: mcphub
+    image: mcp-foyer:local
+    container_name: mcp-foyer
     restart: unless-stopped
 
     ports:
@@ -32,7 +32,7 @@ services:
       #
       # For a trusted network where anyone who can see the host may use it,
       # change this to "7788:7788" to publish on every interface. The
-      # gateway's own allowlist does not stand in the way — the entrypoint
+      # mcp-foyer's own allowlist does not stand in the way — the entrypoint
       # opens it (see docker/entrypoint.sh) — so this line is the control
       # that decides who can reach it.
       #
@@ -43,14 +43,14 @@ services:
       # config.yaml and logs/ live here, so `docker compose down` and a
       # rebuild do not discard them. Edit the configuration through the
       # web interface, the CLI, or by editing the file in this volume.
-      - mcphub-data:/data
+      - mcp-foyer-data:/data
 
     environment:
       # Timestamps in the log match the host's timezone rather than UTC.
       TZ: ${TZ:-UTC}
 
     healthcheck:
-      # The gateway's own endpoint, asked from inside the container so
+      # mcp-foyer's own endpoint, asked from inside the container so
       # that it does not depend on the published port. wget is in busybox,
       # so this needs nothing the image would not otherwise carry.
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7788/api/health"]
@@ -67,4 +67,4 @@ services:
     init: true
 
 volumes:
-  mcphub-data:
+  mcp-foyer-data:

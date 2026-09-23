@@ -14,13 +14,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/gateway"
-	"mcphub/internal/logging"
-	"mcphub/internal/upstream"
-	"mcphub/internal/usage"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/logging"
+	"mcp-foyer/internal/upstream"
+	"mcp-foyer/internal/usage"
 )
 
 // shutdownGrace is how long in-flight requests have to finish once the
@@ -255,7 +255,7 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 
 	addr := listener.Addr().String()
 	cli.Info("listening", "addr", addr, "servers", len(cfg.MCPServers))
-	fmt.Fprintf(stdout, "mcphub %s listening on http://%s\n", version, addr)
+	fmt.Fprintf(stdout, "mcp-foyer %s listening on http://%s\n", version, addr)
 	if opts.Ready != nil {
 		opts.Ready(addr)
 	}

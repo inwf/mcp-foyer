@@ -29,7 +29,7 @@ const systemToolReadTimeout = 10 * time.Second
 
 // internalClientName identifies the gateway to itself in the initialize
 // handshake. It never reaches a real peer.
-const internalClientName = "mcphub-internal"
+const internalClientName = "mcp-foyer-internal"
 
 // sessionLedger records the two things the gateway knows about its own
 // sessions that the SDK does not report, both of which decide whether a
@@ -223,7 +223,7 @@ func (g *Gateway) SystemTools() []*mcp.Tool {
 		if err != nil {
 			// A gateway that cannot describe its own tools still forwards
 			// everything else, so this is degraded rather than fatal.
-			g.log.Error("could not read back the gateway's own tools", "error", err)
+			g.log.Error("could not read back mcp-foyer's own tools", "error", err)
 			return
 		}
 		g.systemTools = tools
@@ -254,7 +254,7 @@ func (g *Gateway) readBackSystemTools() ([]*mcp.Tool, error) {
 	}
 
 	if len(tools) != len(SystemToolNames) {
-		return nil, fmt.Errorf("the server published %d of the %d gateway tools",
+		return nil, fmt.Errorf("the server published %d of its %d own tools",
 			len(tools), len(SystemToolNames))
 	}
 	return tools, nil
@@ -270,7 +270,7 @@ func (g *Gateway) readBackSystemTools() ([]*mcp.Tool, error) {
 // answer is the same one a model would get.
 func (g *Gateway) CallSystemTool(ctx context.Context, name string, arguments map[string]any) (*mcp.CallToolResult, error) {
 	if !IsSystemTool(name) {
-		return nil, fmt.Errorf("%q is not one of the gateway's own tools; they are %s",
+		return nil, fmt.Errorf("%q is not one of mcp-foyer's own tools; they are %s",
 			name, joinNames(SystemToolNames))
 	}
 

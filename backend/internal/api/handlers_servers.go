@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/gateway"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/upstream"
 )
 
 // ServerView is one server as the API reports it: what it is configured

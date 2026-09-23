@@ -8,10 +8,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/gateway"
-	"mcphub/internal/guide"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/guide"
 )
 
 // A guide is worth testing not for its prose but for whether it is still
@@ -37,7 +37,7 @@ func TestGuideIsPrinted(t *testing.T) {
 	}
 }
 
-// The command and the gateway's hub://guide resource serve one document.
+// The command and the gateway's foyer://guide resource serve one document.
 // This pins the CLI half to the shared package; the gateway half is pinned
 // in internal/gateway. What both are there to stop is a second embedded
 // copy, which would read identically until the day one of them is edited.
@@ -59,7 +59,7 @@ func TestGuideOnlyMentionsRealCommands(t *testing.T) {
 
 	unknown, checked := checkCommandsIn(root, guide.Text())
 	if checked == 0 {
-		t.Fatal("no mcphub commands were found in the guide, so this proves nothing")
+		t.Fatal("no mcp-foyer commands were found in the guide, so this proves nothing")
 	}
 	for _, bad := range unknown {
 		t.Errorf("the guide tells the reader to run %q, which is not a command; "+
@@ -96,8 +96,8 @@ func TestGuideMentionsEveryCommand(t *testing.T) {
 		if skip[strings.Fields(path)[0]] {
 			continue
 		}
-		if !strings.Contains(guide.Text(), "mcphub "+path) {
-			t.Errorf("the guide never mentions %q", "mcphub "+path)
+		if !strings.Contains(guide.Text(), "mcp-foyer "+path) {
+			t.Errorf("the guide never mentions %q", "mcp-foyer "+path)
 		}
 	}
 }
@@ -105,7 +105,7 @@ func TestGuideMentionsEveryCommand(t *testing.T) {
 // The system tools are the part a model needs explained, so a new or
 // renamed one that never reaches the guide is a real omission.
 func TestGuideDocumentsEverySystemTool(t *testing.T) {
-	section, ok := guide.Section("网关自带的系统工具")
+	section, ok := guide.Section("自带的系统工具")
 	if !ok {
 		t.Fatal("the guide has no system-tools section")
 	}
@@ -215,7 +215,7 @@ func commandPaths(root *cobra.Command) map[string]bool {
 	return paths
 }
 
-// checkCommandsIn walks every "mcphub ..." line of the guide against the
+// checkCommandsIn walks every "mcp-foyer ..." line of the guide against the
 // command tree, and reports the words that name a command which does not
 // exist.
 //
@@ -227,7 +227,7 @@ func commandPaths(root *cobra.Command) map[string]bool {
 // than a command that has gone missing.
 func checkCommandsIn(root *cobra.Command, document string) (unknown []string, checked int) {
 	for _, line := range strings.Split(document, "\n") {
-		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "mcphub ")
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "mcp-foyer ")
 		if !ok {
 			continue
 		}
@@ -241,7 +241,7 @@ func checkCommandsIn(root *cobra.Command, document string) (unknown []string, ch
 			}
 			child := childNamed(cmd, word)
 			if child == nil {
-				unknown = append(unknown, "mcphub "+strings.Join(append(path, word), " "))
+				unknown = append(unknown, "mcp-foyer "+strings.Join(append(path, word), " "))
 				break
 			}
 			cmd = child
@@ -251,7 +251,7 @@ func checkCommandsIn(root *cobra.Command, document string) (unknown []string, ch
 	return unknown, checked
 }
 
-// checkFlagsIn walks every "mcphub ..." line of the guide and reports the
+// checkFlagsIn walks every "mcp-foyer ..." line of the guide and reports the
 // --flags that the command on that line does not have.
 //
 // The command is resolved the same way checkCommandsIn resolves it, so a
@@ -259,7 +259,7 @@ func checkCommandsIn(root *cobra.Command, document string) (unknown []string, ch
 // against the whole program: --verbose exists, but not on `tools list`.
 func checkFlagsIn(root *cobra.Command, document string) (unknown []string, checked int) {
 	for _, line := range strings.Split(document, "\n") {
-		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "mcphub ")
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "mcp-foyer ")
 		if !ok {
 			continue
 		}
@@ -271,7 +271,7 @@ func checkFlagsIn(root *cobra.Command, document string) (unknown []string, check
 			// values, neither of which is part of what a user types.
 			word = strings.Trim(word, "[]`\"")
 
-			// A bare "--" ends mcphub's own arguments: what follows is the
+			// A bare "--" ends mcp-foyer's own arguments: what follows is the
 			// upstream command line, whose flags belong to that program.
 			if word == "--" {
 				break
@@ -282,7 +282,7 @@ func checkFlagsIn(root *cobra.Command, document string) (unknown []string, check
 				checked++
 				if lookupFlag(cmd, name) == nil {
 					unknown = append(unknown,
-						strings.TrimSpace("mcphub "+strings.Join(path, " ")+" --"+name))
+						strings.TrimSpace("mcp-foyer "+strings.Join(path, " ")+" --"+name))
 				}
 				continue
 			}

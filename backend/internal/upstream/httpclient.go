@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // httpClientFor builds the HTTP client used to reach one streamable HTTP

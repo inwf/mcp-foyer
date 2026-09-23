@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 // serveMCP builds an API whose MCP endpoint is the given handler, which

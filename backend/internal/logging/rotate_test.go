@@ -39,7 +39,7 @@ func TestRotatesWhenTheSizeLimitIsPassed(t *testing.T) {
 	clock := &fixedClock{at: time.Date(2026, 8, 24, 10, 0, 0, 0, time.Local)}
 
 	w, err := newRotatingFile(rotateOptions{
-		Path:      filepath.Join(dir, "mcphub.log"),
+		Path:      filepath.Join(dir, "mcp-foyer.log"),
 		MaxSizeMB: 1,
 		Now:       clock.now,
 	})
@@ -66,10 +66,10 @@ func TestRotatesWhenTheSizeLimitIsPassed(t *testing.T) {
 	if len(names) != 2 {
 		t.Fatalf("after crossing the limit the directory holds %v, want two files", names)
 	}
-	if !contains(names, "mcphub.log") {
+	if !contains(names, "mcp-foyer.log") {
 		t.Errorf("the active log file is missing from %v", names)
 	}
-	if !contains(names, "mcphub-20260824-100100.log") {
+	if !contains(names, "mcp-foyer-20260824-100100.log") {
 		t.Errorf("the archived file is not named after the rotation time: %v", names)
 	}
 }
@@ -81,7 +81,7 @@ func TestARecordIsNeverSplitAcrossFiles(t *testing.T) {
 	clock := &fixedClock{at: time.Date(2026, 8, 24, 10, 0, 0, 0, time.Local)}
 
 	w, err := newRotatingFile(rotateOptions{
-		Path:      filepath.Join(dir, "mcphub.log"),
+		Path:      filepath.Join(dir, "mcp-foyer.log"),
 		MaxSizeMB: 1,
 		Now:       clock.now,
 	})
@@ -99,7 +99,7 @@ func TestARecordIsNeverSplitAcrossFiles(t *testing.T) {
 		t.Fatalf("marker write: %v", err)
 	}
 
-	active := readWholeFile(t, filepath.Join(dir, "mcphub.log"))
+	active := readWholeFile(t, filepath.Join(dir, "mcp-foyer.log"))
 	if !strings.HasSuffix(strings.TrimRight(active, "\n"), "END") {
 		t.Error("the record that triggered the rotation was not written whole to the new file")
 	}
@@ -113,7 +113,7 @@ func TestRotatingTwiceInTheSameSecondKeepsBothFiles(t *testing.T) {
 	clock := &fixedClock{at: time.Date(2026, 8, 24, 10, 0, 0, 0, time.Local)}
 
 	w, err := newRotatingFile(rotateOptions{
-		Path:      filepath.Join(dir, "mcphub.log"),
+		Path:      filepath.Join(dir, "mcp-foyer.log"),
 		MaxSizeMB: 1,
 		Now:       clock.now,
 	})
@@ -141,13 +141,13 @@ func TestRetentionDeletesExpiredArchives(t *testing.T) {
 	clock := &fixedClock{at: time.Date(2026, 8, 24, 10, 0, 0, 0, time.Local)}
 
 	// Files named as though they were rotated at known times.
-	writeArchive(t, dir, "mcphub-20260801-120000.log") // 23 days old
-	writeArchive(t, dir, "mcphub-20260822-120000.log") // 2 days old
-	writeArchive(t, dir, "unrelated.txt")              // not ours
-	writeArchive(t, dir, "mcphub-not-a-timestamp.log") // ours, unparseable
+	writeArchive(t, dir, "mcp-foyer-20260801-120000.log") // 23 days old
+	writeArchive(t, dir, "mcp-foyer-20260822-120000.log") // 2 days old
+	writeArchive(t, dir, "unrelated.txt")                 // not ours
+	writeArchive(t, dir, "mcp-foyer-not-a-timestamp.log") // ours, unparseable
 
 	w, err := newRotatingFile(rotateOptions{
-		Path:      filepath.Join(dir, "mcphub.log"),
+		Path:      filepath.Join(dir, "mcp-foyer.log"),
 		MaxSizeMB: 1,
 		MaxAge:    7 * 24 * time.Hour,
 		Now:       clock.now,
@@ -158,16 +158,16 @@ func TestRetentionDeletesExpiredArchives(t *testing.T) {
 	defer w.Close()
 
 	names := logNames(t, dir)
-	if contains(names, "mcphub-20260801-120000.log") {
+	if contains(names, "mcp-foyer-20260801-120000.log") {
 		t.Errorf("an archive older than the retention window survived: %v", names)
 	}
-	if !contains(names, "mcphub-20260822-120000.log") {
+	if !contains(names, "mcp-foyer-20260822-120000.log") {
 		t.Errorf("an archive inside the retention window was deleted: %v", names)
 	}
 	if !contains(names, "unrelated.txt") {
 		t.Errorf("a file that is not ours was deleted: %v", names)
 	}
-	if !contains(names, "mcphub-not-a-timestamp.log") {
+	if !contains(names, "mcp-foyer-not-a-timestamp.log") {
 		t.Errorf("a file with an unreadable timestamp was deleted: %v", names)
 	}
 }
@@ -176,11 +176,11 @@ func TestRetentionDeletesExpiredArchives(t *testing.T) {
 // wait for the next rotation to be applied.
 func TestRetentionRunsAtStartup(t *testing.T) {
 	dir := t.TempDir()
-	writeArchive(t, dir, "mcphub-20260101-120000.log")
+	writeArchive(t, dir, "mcp-foyer-20260101-120000.log")
 
 	clock := &fixedClock{at: time.Date(2026, 8, 24, 10, 0, 0, 0, time.Local)}
 	w, err := newRotatingFile(rotateOptions{
-		Path:      filepath.Join(dir, "mcphub.log"),
+		Path:      filepath.Join(dir, "mcp-foyer.log"),
 		MaxSizeMB: 1,
 		MaxAge:    7 * 24 * time.Hour,
 		Now:       clock.now,
@@ -190,18 +190,18 @@ func TestRetentionRunsAtStartup(t *testing.T) {
 	}
 	defer w.Close()
 
-	if contains(logNames(t, dir), "mcphub-20260101-120000.log") {
+	if contains(logNames(t, dir), "mcp-foyer-20260101-120000.log") {
 		t.Error("an expired archive survived startup")
 	}
 }
 
 func TestZeroRetentionKeepsEverything(t *testing.T) {
 	dir := t.TempDir()
-	writeArchive(t, dir, "mcphub-20200101-120000.log")
+	writeArchive(t, dir, "mcp-foyer-20200101-120000.log")
 
 	clock := &fixedClock{at: time.Date(2026, 8, 24, 10, 0, 0, 0, time.Local)}
 	w, err := newRotatingFile(rotateOptions{
-		Path:      filepath.Join(dir, "mcphub.log"),
+		Path:      filepath.Join(dir, "mcp-foyer.log"),
 		MaxSizeMB: 1,
 		MaxAge:    0,
 		Now:       clock.now,
@@ -211,7 +211,7 @@ func TestZeroRetentionKeepsEverything(t *testing.T) {
 	}
 	defer w.Close()
 
-	if !contains(logNames(t, dir), "mcphub-20200101-120000.log") {
+	if !contains(logNames(t, dir), "mcp-foyer-20200101-120000.log") {
 		t.Error("a very old archive was deleted even though retention is disabled")
 	}
 }
@@ -220,7 +220,7 @@ func TestZeroRetentionKeepsEverything(t *testing.T) {
 // to count toward the size limit or the file grows without bound.
 func TestReopeningAppendsAndCountsExistingBytes(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "mcphub.log")
+	path := filepath.Join(dir, "mcp-foyer.log")
 	clock := &fixedClock{at: time.Date(2026, 8, 24, 10, 0, 0, 0, time.Local)}
 
 	first, err := newRotatingFile(rotateOptions{Path: path, MaxSizeMB: 1, Now: clock.now})
@@ -255,7 +255,7 @@ func TestReopeningAppendsAndCountsExistingBytes(t *testing.T) {
 
 func TestCloseIsRepeatable(t *testing.T) {
 	w, err := newRotatingFile(rotateOptions{
-		Path:      filepath.Join(t.TempDir(), "mcphub.log"),
+		Path:      filepath.Join(t.TempDir(), "mcp-foyer.log"),
 		MaxSizeMB: 1,
 	})
 	if err != nil {

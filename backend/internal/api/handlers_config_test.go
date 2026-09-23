@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
 )
 
 // server builds a valid server definition, starting from the defaults so

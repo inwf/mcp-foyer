@@ -9,8 +9,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/upstream"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 
 // Name identifies the gateway in the handshake and in discovery calls
 // that ask about its own tools.
-const Name = "mcphub"
+const Name = "mcp-foyer"
 
 // SystemToolNames lists every gateway tool, for callers that need to
 // tell them apart from forwarded ones.
@@ -90,7 +90,7 @@ type listServersOutput struct {
 }
 
 type getToolDetailsInput struct {
-	Server string `json:"server" jsonschema:"exact server name as listed by list_servers, or mcphub for this gateway's own tools"`
+	Server string `json:"server" jsonschema:"exact server name as listed by list_servers, or mcp-foyer for this endpoint's own tools"`
 	Tool   string `json:"tool" jsonschema:"exact tool name on that server"`
 }
 
@@ -115,7 +115,7 @@ type callToolInput struct {
 
 type searchToolsInput struct {
 	Query         string `json:"query,omitempty" jsonschema:"words describing the capability, matched against tool and server names and descriptions and parameter names, in any spelling (readFile finds read_file); rarer words weigh more and a word matching nothing is ignored, not fatal. The directory may mix languages, so when unsure give the words in both. Supply query or server"`
-	Server        string `json:"server,omitempty" jsonschema:"exact server name to search within, or to browse when query is omitted; mcphub for this gateway's own tools"`
+	Server        string `json:"server,omitempty" jsonschema:"exact server name to search within, or to browse when query is omitted; mcp-foyer for this endpoint's own tools"`
 	Limit         *int   `json:"limit,omitempty" jsonschema:"maximum number of results, from 1 to 20; default 5"`
 	IncludeSchema bool   `json:"includeSchema,omitempty" jsonschema:"also return each hit's complete input schema and annotations, so a call can be prepared from this one result; default false. Combine with a limit of 1 to 3"`
 	Cursor        string `json:"cursor,omitempty" jsonschema:"nextCursor from the previous result, with the same query and server, to get the next page"`
@@ -156,7 +156,7 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 	}
 	mcp.AddTool(server, &mcp.Tool{
 		Name: ToolListServers,
-		Description: "Overview of the servers behind this gateway: each one's name, state, description, " +
+		Description: "Overview of the servers behind this endpoint: each one's name, state, description, " +
 			"tool and resource counts, and the error when it is down. " +
 			"Start here when the servers are unknown; when the capability is known, search_tools finds it directly, " +
 			"and search_tools(server) lists what one server offers.",
@@ -167,7 +167,7 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: ToolSearchTools,
-		Description: "Find tools on the servers behind this gateway by describing the capability, or browse one server by giving " +
+		Description: "Find tools on the servers behind this endpoint by describing the capability, or browse one server by giving " +
 			"server alone. Most tools are not in this tool list and are only reachable this way; every hit can then be called " +
 			"with call_tool(server, tool, args). Results are ranked best first, five per page by default; includeSchema=true " +
 			"returns each hit's input schema so the call can be prepared from the same result. " +
@@ -203,11 +203,11 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: ToolCallTool,
-		Description: "Call a tool on one of the servers behind this gateway by server name, tool name and arguments, " +
+		Description: "Call a tool on one of the servers behind this endpoint by server name, tool name and arguments, " +
 			"whether or not the tool is in this tool list. The arguments are checked against the tool's input schema " +
 			"before forwarding, and the result is returned as the tool produced it. " +
 			"Skip discovery when server, tool and arguments are already known. " +
-			"This gateway's own four tools are called directly, not through call_tool.",
+			"This endpoint's own four tools are called directly, not through call_tool.",
 		Annotations: &mcp.ToolAnnotations{
 			Title:         "Call a tool on a server",
 			OpenWorldHint: boolPtr(true),
@@ -445,7 +445,7 @@ func unknownServer(server string, known []string) error {
 	// Reached for the gateway's own name only where it genuinely is not a
 	// server: call_tool forwards to upstreams; the gateway tools are called directly.
 	if server == Name {
-		return fmt.Errorf("%s is this gateway itself rather than one of the servers it proxies; "+
+		return fmt.Errorf("%s is this endpoint itself rather than one of the servers it proxies; "+
 			"its own tools are in the tool list and are called directly, and search_tools and get_tool_details "+
 			"take %q as a server name if you want to see them", Name, Name)
 	}
@@ -472,7 +472,7 @@ func withSystemToolHint(err error, tool string) error {
 	if !IsSystemTool(tool) {
 		return err
 	}
-	return fmt.Errorf("%w; note that %q is one of this gateway's own tools — it is already in the tool list, "+
+	return fmt.Errorf("%w; note that %q is one of this endpoint's own tools — it is already in the tool list, "+
 		"call it directly and pass no server name", err, tool)
 }
 

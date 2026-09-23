@@ -83,7 +83,7 @@ describe('applying it to the document', () => {
 describe('what is remembered', () => {
   it('reads a stored choice', () => {
     for (const choice of ['light', 'dark', 'system'] as const) {
-      localStorage.setItem('mcphub.theme', JSON.stringify({ state: { choice } }));
+      localStorage.setItem('mcp-foyer.theme', JSON.stringify({ state: { choice } }));
       expect(storedChoice()).toBe(choice);
     }
   });
@@ -92,13 +92,13 @@ describe('what is remembered', () => {
   // not necessarily ours and not necessarily intact. None of that is
   // worth failing a page load over.
   it('opens the light workbench when no valid preference is stored', () => {
-    localStorage.setItem('mcphub.theme', 'not json at all');
+    localStorage.setItem('mcp-foyer.theme', 'not json at all');
     expect(storedChoice()).toBe('light');
 
-    localStorage.setItem('mcphub.theme', JSON.stringify({ state: { choice: 'chartreuse' } }));
+    localStorage.setItem('mcp-foyer.theme', JSON.stringify({ state: { choice: 'chartreuse' } }));
     expect(storedChoice()).toBe('light');
 
-    localStorage.removeItem('mcphub.theme');
+    localStorage.removeItem('mcp-foyer.theme');
     expect(storedChoice()).toBe('light');
   });
 
@@ -108,7 +108,7 @@ describe('what is remembered', () => {
     systemPrefers(true);
     useThemeStore.getState().setChoice('light');
 
-    const raw = localStorage.getItem('mcphub.theme') ?? '';
+    const raw = localStorage.getItem('mcp-foyer.theme') ?? '';
     expect(raw).toContain('light');
     expect(JSON.parse(raw)).toEqual({ state: { choice: 'light' }, version: 0 });
   });

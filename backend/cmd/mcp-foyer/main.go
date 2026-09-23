@@ -1,4 +1,4 @@
-// Command mcphub runs the MCP gateway: it proxies a set of configured
+// Command mcp-foyer runs the MCP gateway: it proxies a set of configured
 // upstream MCP servers behind a single MCP endpoint, and serves a web
 // UI for managing them.
 package main
@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // resolveConfigPath decides which configuration file to read, as an
@@ -66,18 +66,18 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 
 	// A command that has already reported the problem itself only needs
-	// the exit code. Printing "mcphub: " and an empty message after a
+	// the exit code. Printing "mcp-foyer: " and an empty message after a
 	// list of validation problems would say nothing and look like a
 	// second, mysterious failure.
 	if errors.Is(err, errSilent) {
 		return exitFailure
 	}
 
-	fmt.Fprintf(stderr, "mcphub: %v\n", err)
+	fmt.Fprintf(stderr, "mcp-foyer: %v\n", err)
 
 	var usage *usageError
 	if errors.As(err, &usage) {
-		fmt.Fprintln(stderr, "run \"mcphub --help\" for usage")
+		fmt.Fprintln(stderr, "run \"mcp-foyer --help\" for usage")
 		return exitUsage
 	}
 	return exitFailure

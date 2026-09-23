@@ -2,11 +2,11 @@
 
 给在这个仓库里工作的 AI 助手看的。面向使用者的文档在
 [README.md](README.md)、[docs/configuration.md](docs/configuration.md) 和
-`mcphub guide`。
+`mcp-foyer guide`。
 
 ## 一句话
 
-Go 后端 + React 前端的 MCP 网关，构建成单个二进制。`backend/` 和 `frontend/`
+Go 后端 + React 前端的 MCP 聚合端点 mcp-foyer，构建成单个二进制。`backend/` 和 `frontend/`
 是两个平级项目，`Makefile` 在仓库根负责把它们串起来。
 
 ## 开始之前
@@ -41,7 +41,7 @@ make build      # 前端 → 拷进嵌入目录 → 带 webui 标签构建二进
 - CLI 里以 `servers`、`tools` 开头的命令是**运行中实例的 HTTP 客户端**。它们
   不自己加载配置去连上游——那样报的是"第二种意见"而不是事实。
 - 退出码分三种：0、1（运行失败）、2（用法错误）。cobra 不区分后两者，靠
-  `cmd/mcphub/root.go` 里的 `usageError` 包装类型分流。
+  `cmd/mcp-foyer/root.go` 里的 `usageError` 包装类型分流。
 
 ### 前端
 
@@ -70,7 +70,7 @@ TypeScript 的 MCP SDK 会把 `properties` 下的每一项按对象校验，遇�
 - **测试名是一句话**，说明它保护的是什么行为，不是它调用了哪个函数。
 - **注释写"为什么"。** 不显然的断言旁边应当说明它防的是什么。
 - **防漂移的测试要做反向验证。** 一条永远绿的测试和没有测试是一回事——写完之后
-  故意把被测行为改坏一次，确认它真的红。`cmd/mcphub/guide_test.go` 是这类测试
+  故意把被测行为改坏一次，确认它真的红。`cmd/mcp-foyer/guide_test.go` 是这类测试
   的例子：它拿使用指南对照命令树、系统工具名和各项常量，而不是对照一份固定文本。
 - 需要真实 MCP 服务器时用 `internal/testmcp`：`ServerConfig` 给 stdio 版本
   （重新执行测试二进制自己），`Handler` 给 HTTP 版本。两者共用同一个被测服务器，

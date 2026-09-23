@@ -11,10 +11,10 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
-	"mcphub/internal/testmcp"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
+	"mcp-foyer/internal/testmcp"
+	"mcp-foyer/internal/upstream"
 )
 
 // serverConfig points a stdio server at this test binary, running in the

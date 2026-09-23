@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"mcphub/internal/config"
-	"mcphub/internal/gateway"
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/testmcp"
 )
 
 // withTestServer starts a gateway with the test MCP server attached under

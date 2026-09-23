@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
-	"mcphub/internal/testmcp"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/testmcp"
 )
 
 // These cover the commands that are clients of a running gateway. The
@@ -214,7 +214,7 @@ func TestClientCommandExplainsThatNoGatewayIsRunning(t *testing.T) {
 	if !strings.Contains(stderr, address) {
 		t.Errorf("the message does not say where it looked:\n%s", stderr)
 	}
-	if !strings.Contains(stderr, "mcphub serve") {
+	if !strings.Contains(stderr, "mcp-foyer serve") {
 		t.Errorf("the message does not say how to start one:\n%s", stderr)
 	}
 	// The Go dial error is what this exists to replace.

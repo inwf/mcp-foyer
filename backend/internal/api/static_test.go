@@ -8,13 +8,13 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"mcphub/internal/api"
+	"mcp-foyer/internal/api"
 )
 
 // builtUI stands in for the frontend's build output.
 func builtUI() fs.FS {
 	return fstest.MapFS{
-		"index.html":          {Data: []byte("<!doctype html><title>mcphub</title>")},
+		"index.html":          {Data: []byte("<!doctype html><title>mcp-foyer</title>")},
 		"assets/app.js":       {Data: []byte("console.log('app')")},
 		"assets/app.css":      {Data: []byte("body{margin:0}")},
 		"favicon.svg":         {Data: []byte("<svg/>")},
@@ -47,7 +47,7 @@ func TestTheRootServesTheApp(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
-	if body := bodyOf(t, resp); !strings.Contains(body, "mcphub") {
+	if body := bodyOf(t, resp); !strings.Contains(body, "mcp-foyer") {
 		t.Errorf("body = %q, want the entry document", body)
 	}
 }
@@ -101,7 +101,7 @@ func TestAnUnknownPathServesTheApp(t *testing.T) {
 			t.Errorf("%s: status = %d, want 200", path, resp.StatusCode)
 			continue
 		}
-		if body := bodyOf(t, resp); !strings.Contains(body, "mcphub") {
+		if body := bodyOf(t, resp); !strings.Contains(body, "mcp-foyer") {
 			t.Errorf("%s: body = %q, want the entry document", path, body)
 		}
 	}
@@ -133,7 +133,7 @@ func TestAPathThatOnlyLooksLikeTheAPIPrefixGoesToTheApp(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want the app to have handled it", resp.StatusCode)
 	}
-	if body := bodyOf(t, resp); !strings.Contains(body, "mcphub") {
+	if body := bodyOf(t, resp); !strings.Contains(body, "mcp-foyer") {
 		t.Errorf("body = %q, want the entry document", body)
 	}
 }
@@ -200,7 +200,7 @@ func TestATraversingPathCannotEscape(t *testing.T) {
 		"/%2e%2e%2fgo.mod",
 	} {
 		resp := h.get(t, path)
-		if body := bodyOf(t, resp); strings.Contains(body, "module mcphub") {
+		if body := bodyOf(t, resp); strings.Contains(body, "module mcp-foyer") {
 			t.Errorf("%s served the module file", path)
 		}
 	}

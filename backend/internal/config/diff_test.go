@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 func changeFor(changes []config.Change, field string) (config.Change, bool) {

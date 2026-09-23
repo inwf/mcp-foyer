@@ -16,11 +16,11 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/gateway"
-	"mcphub/internal/guide"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/guide"
+	"mcp-foyer/internal/upstream"
 )
 
 // gatewayOn builds a gateway over the given upstreams and serves it on a
@@ -912,7 +912,7 @@ func TestAServerResourceCarriesTheRecordedDescription(t *testing.T) {
 	}
 }
 
-// serverResource is the shape a client sees at hub://servers/{name}. It is
+// serverResource is the shape a client sees at foyer://servers/{name}. It is
 // spelled out here rather than imported so that the test breaks when the
 // published shape changes, which is the thing worth noticing.
 type serverResource struct {

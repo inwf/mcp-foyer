@@ -10,11 +10,11 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
-	"mcphub/internal/events"
-	"mcphub/internal/gateway"
-	"mcphub/internal/testmcp"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/testmcp"
+	"mcp-foyer/internal/upstream"
 )
 
 // statusOf finds one server's status by name.

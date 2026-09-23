@@ -23,7 +23,7 @@ func newUICommand(global *globalOptions, stdout io.Writer, open browserOpener) *
 	cmd := &cobra.Command{
 		Use:   "ui",
 		Short: "Open the web interface in a browser",
-		Long: "Open the running gateway's web interface.\n\n" +
+		Long: "Open the running instance's web interface.\n\n" +
 			"The address comes from the configuration unless --address says\n" +
 			"otherwise. The URL is printed either way, so that this is still\n" +
 			"useful where no browser can be opened — over ssh, or in a container.",

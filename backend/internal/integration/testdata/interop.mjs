@@ -8,7 +8,7 @@ const require = createRequire(resolve(process.argv[2], 'package.json'));
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StreamableHTTPClientTransport } = require('@modelcontextprotocol/sdk/client/streamableHttp.js');
 
-const client = new Client({ name: 'mcphub-interop', version: '1.0' });
+const client = new Client({ name: 'mcp-foyer-interop', version: '1.0' });
 try {
   await client.connect(new StreamableHTTPClientTransport(new URL(process.argv[3])));
   const listed = await client.listTools();
@@ -23,7 +23,7 @@ try {
     return result.structuredContent;
   };
 
-  const own = await call('search_tools', { server: 'mcphub', includeSchema: true });
+  const own = await call('search_tools', { server: 'mcp-foyer', includeSchema: true });
   assert.deepEqual(own.hits.map(hit => hit.tool).sort(), systemNames);
   for (const hit of own.hits) {
     assert.deepEqual(hit.inputSchema, listed.tools.find(tool => tool.name === hit.tool).inputSchema);

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/events"
+	"mcp-foyer/internal/events"
 )
 
 // stalled is a client whose buffer is already full, standing in for one

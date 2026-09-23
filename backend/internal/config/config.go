@@ -1,4 +1,4 @@
-// Package config defines the on-disk configuration of mcphub and the
+// Package config defines the on-disk configuration of mcp-foyer and the
 // operations for loading, validating and persisting it.
 //
 // The configuration is a single YAML file. Every duration is written in
@@ -8,7 +8,7 @@ package config
 
 import "time"
 
-// Transport identifies how mcphub reaches an upstream MCP server.
+// Transport identifies how mcp-foyer reaches an upstream MCP server.
 type Transport string
 
 const (
@@ -18,7 +18,7 @@ const (
 
 	// TransportStreamableHTTP connects to an already-running server over
 	// MCP's streamable HTTP transport. The server is someone else's to
-	// run; mcphub only dials it.
+	// run; mcp-foyer only dials it.
 	TransportStreamableHTTP Transport = "streamable-http"
 )
 
@@ -212,7 +212,7 @@ type Startup struct {
 type MCPServer struct {
 	Transport Transport `yaml:"transport"`
 
-	// Enabled controls whether mcphub connects to this server at
+	// Enabled controls whether mcp-foyer connects to this server at
 	// startup. A disabled server stays in the configuration and remains
 	// visible in the web UI.
 	Enabled bool `yaml:"enabled"`

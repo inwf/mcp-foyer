@@ -1,13 +1,16 @@
-# mcphub
+# mcp-foyer
 
 把若干个 MCP 服务器合并成**一个**端点。
 
-客户端只配置一次，之后增删上游、改配置、看日志都在网关这边完成，不用再碰
+它和常说的 MCP gateway 做的是同一类事，但它是给个人在本机用的单个二进制，没有
+鉴权与策略层。重点是让不会自己做渐进式披露的简单客户端，也能按需搜索和调用工具。
+
+客户端只配置一次，之后增删上游、改配置、看日志都在 mcp-foyer 这边完成，不用再碰
 客户端。
 
 ```
 Claude Code ─┐                        ┌─ stdio 子进程（filesystem、git…）
-其他客户端  ─┼─→  mcphub  /mcp  ──────┼─ stdio 子进程
+其他客户端  ─┼─→  mcp-foyer  /mcp  ───┼─ stdio 子进程
              ┘                        └─ streamable HTTP 服务（远端）
 ```
 
@@ -19,7 +22,7 @@ Claude Code ─┐                        ┌─ stdio 子进程（filesystem、
 - **上下文被工具塞满。** 几百个工具的完整 schema 一次性进上下文，代价不小。
 - **出了问题看不见。** 某台服务器起不来时，客户端通常只是"那个工具不见了"。
 
-mcphub 对应的做法是：客户端只配一个地址；提供 `search_tools` / `get_tool_details` /
+mcp-foyer 对应的做法是：客户端只配一个地址；提供 `search_tools` / `get_tool_details` /
 `call_tool` 这类系统工具，让模型按需发现工具，也能在一次搜索中取得调用所需的 schema；并给出一个 Web 界面
 和一套 CLI，能看到每台服务器的状态、日志和它报的错。
 
@@ -48,7 +51,7 @@ docker compose up -d
 
 ```
 make build          # 构建前端，嵌入后端，产出单个二进制
-./backend/bin/mcphub serve
+./backend/bin/mcp-foyer serve
 ```
 
 同样是 <http://127.0.0.1:7788/> 和 <http://127.0.0.1:7788/mcp>。
@@ -56,24 +59,24 @@ make build          # 构建前端，嵌入后端，产出单个二进制
 以 Claude Code 为例：
 
 ```
-claude mcp add --transport http mcphub http://127.0.0.1:7788/mcp
+claude mcp add --transport http mcp-foyer http://127.0.0.1:7788/mcp
 ```
 
 加一台上游服务器：
 
 ```
-mcphub servers add files -- npx -y @modelcontextprotocol/server-filesystem /tmp
-mcphub servers list
+mcp-foyer servers add files -- npx -y @modelcontextprotocol/server-filesystem /tmp
+mcp-foyer servers list
 ```
 
-完整用法：`mcphub guide`。配置字段：[docs/configuration.md](docs/configuration.md)。
-网关对模型说了什么：[docs/mcp-surface.md](docs/mcp-surface.md)。
+完整用法：`mcp-foyer guide`。配置字段：[docs/configuration.md](docs/configuration.md)。
+mcp-foyer 对模型说了什么：[docs/mcp-surface.md](docs/mcp-surface.md)。
 
 ## 有什么
 
 - **一个 MCP 端点**聚合全部上游。工具以 `服务器名_工具名` 暴露，两台服务器各有
   一个 `read` 也不会撞名。
-- **两种上游传输**：`stdio`（由 mcphub 拉起子进程）与 `streamable-http`（连接
+- **两种上游传输**：`stdio`（由 mcp-foyer 拉起子进程）与 `streamable-http`（连接
   已在运行的服务）。
 - **四个系统工具**，让模型按需检索工具而不是全量加载。
 - **Web 界面**：服务器状态、工具与资源浏览、实时日志、配置编辑。
@@ -94,12 +97,12 @@ make clean          # 清理构建产物
 开发时前后端分开跑：
 
 ```
-cd backend  && go run ./cmd/mcphub serve
+cd backend  && go run ./cmd/mcp-foyer serve
 cd frontend && pnpm dev
 ```
 
-开发服务器会把 `/api`、`/ws`、`/mcp` 代理到网关，并**保留页面自身的来源**——
-这样网关的 WebSocket 来源检查是被真正走了一遍，而不是被绕过去。
+开发服务器会把 `/api`、`/ws`、`/mcp` 代理到后端，并**保留页面自身的来源**——
+这样后端的 WebSocket 来源检查是被真正走了一遍，而不是被绕过去。
 
 工具发现的基准、实测数据和跨语言 SDK 复测命令见 [性能与兼容性验证](docs/performance.md)。
 
@@ -133,11 +136,11 @@ docker compose down -v        # 停掉，并且删掉配置与日志
 带 `webui` 标签构建二进制。跑起来的那一层不带任何工具链。
 
 **镜像里装了 Node 与 npm。** 最常见的 stdio 上游是 `npx` 包，一个起不动这些
-服务器的网关得再套一层自己的镜像才能用——所以这是刻意把镜像做大的唯一一处
+服务器的 mcp-foyer 得再套一层自己的镜像才能用——所以这是刻意把镜像做大的唯一一处
 （约 154 MB）。加服务器和平时一样：
 
 ```
-docker compose exec mcphub mcphub servers add files -- \
+docker compose exec mcp-foyer mcp-foyer servers add files -- \
   npx -y @modelcontextprotocol/server-filesystem /tmp
 ```
 
@@ -148,10 +151,10 @@ docker compose exec mcphub mcphub servers add files -- \
 作为子进程执行，所以这道边界值得明确设。内网部署、能连到即可信的场景，改成
 `"7788:7788"` 即对整个内网开放。
 
-**容器里不再用 IP 白名单挡。** mcphub 自带的 `security.allowedNetworks` 默认只放行
+**容器里不再用 IP 白名单挡。** mcp-foyer 自带的 `security.allowedNetworks` 默认只放行
 回环，而发布进容器的请求源地址是容器网关（不是回环），用默认会把所有人挡在外面、
 连 Web 界面都是 403。所以入口脚本在**第一次启动**时写一份 `config.yaml`，把这个
-白名单设成空列表——mcphub 读作「放行所有来源」。对容器来说，访问边界是上面那个
+白名单设成空列表——mcp-foyer 读作「放行所有来源」。对容器来说，访问边界是上面那个
 发布端口，不是这个列表。此后该文件不再被脚本改动；若需按来源收紧，把
 空列表换成 CIDR 段（比如 `[10.0.0.0/8]`）即可。
 
@@ -161,7 +164,7 @@ docker compose exec mcphub mcphub servers add files -- \
 
 ```
 backend/
-  cmd/mcphub/        CLI：命令树、serve、各子命令、内嵌使用指南
+  cmd/mcp-foyer/        CLI：命令树、serve、各子命令、内嵌使用指南
   internal/
     config/          配置的类型、解析、校验、读写
     logging/         日志、轮转、供界面查询的内存缓冲
@@ -184,7 +187,7 @@ frontend/
     test/            测试夹具
 docs/
   configuration.md   配置字段参考
-  mcp-surface.md     网关对 MCP 客户端的自述
+  mcp-surface.md     对 MCP 客户端的自述
 ```
 
 ## 技术选型

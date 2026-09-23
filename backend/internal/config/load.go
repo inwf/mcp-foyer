@@ -31,7 +31,7 @@ func Load(path string) (Config, error) {
 
 // LoadOrDefault behaves like [Load], except that a missing file yields
 // the default configuration instead of an error. This is the first-run
-// case: mcphub starts with no upstream servers and writes a file once
+// case: mcp-foyer starts with no upstream servers and writes a file once
 // the user configures one.
 func LoadOrDefault(path string) (Config, error) {
 	cfg, err := Load(path)

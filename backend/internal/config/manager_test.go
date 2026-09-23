@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 func newManager(t *testing.T) (*config.Manager, string) {

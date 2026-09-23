@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // handleGetConfig returns the configuration with secrets hidden.
@@ -150,7 +150,7 @@ func (a *API) handleValidateConfig(c *gin.Context) {
 // exportFilename is what the browser saves the configuration as. The
 // extension matters: this is the file format the gateway reads, so a
 // download should be droppable straight back into a data directory.
-const exportFilename = "mcphub-config.yaml"
+const exportFilename = "mcp-foyer-config.yaml"
 
 // handleExportConfig sends the configuration as a file.
 //

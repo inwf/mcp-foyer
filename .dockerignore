@@ -6,7 +6,7 @@
 
 # Runtime data: a configuration with real credentials in it, and logs.
 # This is the important line in this file — the data directory is where
-# the gateway keeps config.yaml, and baking somebody's into an image is
+# mcp-foyer keeps config.yaml, and baking somebody's into an image is
 # how a secret gets published.
 data/
 backend/data/
@@ -15,7 +15,7 @@ backend/data/
 # in would let a stale local binary or a stale frontend bundle silently
 # win over what this build produced.
 backend/bin/
-backend/mcphub
+backend/mcp-foyer
 backend/internal/webui/dist/
 frontend/dist/
 frontend/.vite/

@@ -26,12 +26,12 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // ModeEnv names the variable that turns a test binary into an MCP
 // server.
-const ModeEnv = "MCPHUB_TEST_MCP_SERVER_MODE"
+const ModeEnv = "MCP_FOYER_TEST_MCP_SERVER_MODE"
 
 // The behaviours a test can ask for.
 const (

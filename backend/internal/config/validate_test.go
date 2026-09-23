@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // fieldsOf returns the dotted paths reported by a validation failure.

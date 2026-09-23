@@ -22,7 +22,7 @@ export type ThemeMode = 'light' | 'dark';
 
 /** The key the choice is stored under. Named for the project so that it
  *  cannot collide with anything else served from the same origin. */
-const STORAGE_KEY = 'mcphub.theme';
+const STORAGE_KEY = 'mcp-foyer.theme';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 const DEFAULT_CHOICE: ThemeChoice = 'light';

@@ -7,8 +7,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/gateway"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/upstream"
 )
 
 // Upstream URIs contain slashes, colons and query strings of their own.
@@ -67,10 +67,10 @@ func TestParseRejectsForeignURIs(t *testing.T) {
 	for _, uri := range []string{
 		"",
 		"file:///tmp/x",
-		"hub://",
-		"hub://servers/",
-		"hub://other/files",
-		"https://example.com/hub://servers/files",
+		"foyer://",
+		"foyer://servers/",
+		"foyer://other/files",
+		"https://example.com/foyer://servers/files",
 		"servers/files",
 	} {
 		if _, _, ok := gateway.ParseResourceURI(uri); ok {

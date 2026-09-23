@@ -14,7 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // listLimit is what the CLI asks for when listing tools.
@@ -109,7 +109,7 @@ func newToolsCommand(global *globalOptions, stdout io.Writer) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "tools",
-		Short: "Inspect and call the tools the gateway offers",
+		Short: "Inspect and call the tools mcp-foyer offers",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return usagef("specify a subcommand: %s", availableCommands(cmd))
 		},
@@ -140,11 +140,11 @@ func newToolsListCommand(client *clientOptions, stdout io.Writer) *cobra.Command
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List the tools the gateway is offering",
-		Long: "List the tools the gateway currently offers, under the names a client\n" +
+		Short: "List the tools mcp-foyer is offering",
+		Long: "List the tools mcp-foyer currently offers, under the names a client\n" +
 			"sees them by. A tool a server has but the configuration does not expose\n" +
 			"is not listed, because it is not on offer.\n\n" +
-			"The gateway's own tools are listed first, apart from the forwarded ones:\n" +
+			"mcp-foyer's own tools are listed first, apart from the forwarded ones:\n" +
 			"they belong to no server, and they are how a model finds everything else.\n\n" +
 			"--all lists every tool every server has, exposed or not, with the name\n" +
 			"each is exposed under. Nothing is exposed unless the configuration asks\n" +
@@ -361,8 +361,8 @@ func printEveryServerTool(stdout io.Writer, tools []aggregatedTool) {
 		return
 	}
 	fmt.Fprintf(stdout,
-		"\n%d of these %s not exposed, so %s not in the gateway's tool list.\n"+
-			"Reach one with the %s gateway tool, or expose it in the web interface.\n",
+		"\n%d of these %s not exposed, so %s not in the tool list clients see.\n"+
+			"Reach one with the %s tool, or expose it in the web interface.\n",
 		unexposed, plural(unexposed, "tool is", "tools are"),
 		plural(unexposed, "it is", "they are"), gateway.ToolCallTool)
 }
@@ -380,7 +380,7 @@ func printHidden(stdout io.Writer, hidden int) {
 	fmt.Fprintf(stdout,
 		"\n%d more upstream %s not exposed, and so not in the list above.\n"+
 			"Nothing is exposed unless the configuration asks for it. See them with\n"+
-			"\"mcphub tools list --all\"; reach one through the %s gateway tool, or\n"+
+			"\"mcp-foyer tools list --all\"; reach one through the %s tool, or\n"+
 			"expose it in the web interface.\n",
 		hidden, plural(hidden, "tool is", "tools are"), gateway.ToolCallTool)
 }
@@ -492,7 +492,7 @@ func showTool(stdout io.Writer, tool aggregatedTool, asJSON bool) error {
 		facts.row("name", tool.Exposed)
 		// A gateway tool is not forwarded from anywhere, and saying "-"
 		// under a SERVER heading would leave a reader wondering which one.
-		facts.row("origin", "the gateway itself")
+		facts.row("origin", "mcp-foyer itself")
 	} else {
 		// Both names, always. The gateway prefixes and renames on a
 		// collision, so the name on the server is what that server's own
@@ -568,15 +568,15 @@ func newToolsCallCommand(client *clientOptions, stdout io.Writer) *cobra.Command
 
 	cmd := &cobra.Command{
 		Use:   "call <tool>",
-		Short: "Call a tool through the gateway",
+		Short: "Call a tool through mcp-foyer",
 		Long: "Call a tool and print what it returned.\n\n" +
 			"The tool is named the way a client would name it — the exposed name,\n" +
 			"such as \"files_read\". A bare tool name is accepted too when only one\n" +
-			"server offers it. The gateway's own tools, such as \"list_servers\", are\n" +
+			"server offers it. mcp-foyer's own tools, such as \"list_servers\", are\n" +
 			"called by their own names.\n\n" +
 			"A tool that is not exposed can be called as \"server/tool\". Exposure\n" +
 			"decides what a client is offered, not what exists: this command talks to\n" +
-			"the server directly, exactly as the call_tool gateway tool does.\n\n" +
+			"the server directly, exactly as call_tool does.\n\n" +
 			"Arguments can be given as one JSON object with --args, as repeated\n" +
 			"--arg key=value pairs, or both; a pair overrides the same key in the\n" +
 			"JSON. A pair's value is converted using the type the tool's schema\n" +
@@ -694,7 +694,7 @@ func suggest(tools []aggregatedTool, name string) string {
 		}
 	}
 	if len(near) == 0 {
-		return "; run \"mcphub tools list --all\" to see what is"
+		return "; run \"mcp-foyer tools list --all\" to see what is"
 	}
 	if len(near) > 5 {
 		near = near[:5]

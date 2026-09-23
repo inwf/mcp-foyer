@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // The backoff schedule is arithmetic, so it is worth pinning exactly

@@ -244,7 +244,7 @@ function Meta() {
   return (
     <footer className={styles.meta}>
       <span>
-        mcphub <strong>{health.data.version}</strong>
+        mcp-foyer <strong>{health.data.version}</strong>
       </span>
       <span>
         {t('overview.uptime')} <strong>{uptime(health.data.uptimeSeconds)}</strong>

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 func TestResolveDataDirPrecedence(t *testing.T) {
@@ -66,7 +66,7 @@ func TestResolveDataDirIsAbsolute(t *testing.T) {
 	}
 }
 
-// Nothing mcphub writes may land outside the data directory. This is the
+// Nothing mcp-foyer writes may land outside the data directory. This is the
 // whole point of having one: deleting it removes every trace.
 func TestEveryPathStaysInsideTheDataDirectory(t *testing.T) {
 	root := t.TempDir()

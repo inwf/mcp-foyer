@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // writeConfig puts a document at a temporary path and returns it.
@@ -99,7 +99,7 @@ func TestConfigValidateDoesNotPrintTheProblemsTwice(t *testing.T) {
 	if strings.Contains(stderr, "listen.port") {
 		t.Errorf("the problem was printed a second time on standard error:\n%s", stderr)
 	}
-	if strings.Contains(stderr, "mcphub: \n") || stderr == "mcphub: \n" {
+	if strings.Contains(stderr, "mcp-foyer: \n") || stderr == "mcp-foyer: \n" {
 		t.Errorf("an empty error message was printed:\n%q", stderr)
 	}
 }
@@ -134,7 +134,7 @@ func TestConfigValidateRejectsAnUnknownKey(t *testing.T) {
 	}
 }
 
-// A file that is not there is not a broken file: mcphub starts on the
+// A file that is not there is not a broken file: mcp-foyer starts on the
 // defaults and writes one when something is configured.
 func TestConfigValidateOnAMissingFileIsNotAFailure(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "nope.yaml")

@@ -3,7 +3,7 @@ package main
 import (
 	"io/fs"
 
-	"mcphub/internal/webui"
+	"mcp-foyer/internal/webui"
 )
 
 // webUI returns the built frontend, or nil when this binary was built

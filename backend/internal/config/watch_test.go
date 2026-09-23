@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // The file is the interface someone edits by hand, so the running

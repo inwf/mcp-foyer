@@ -1,4 +1,4 @@
-// Package logging builds the loggers mcphub writes through.
+// Package logging builds the loggers mcp-foyer writes through.
 //
 // A single logger fans out to up to three destinations: standard output,
 // a rotating file under the data directory, and an in-memory store that
@@ -14,7 +14,7 @@ import (
 	"os"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // Format values accepted by [Options.Format].

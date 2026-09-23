@@ -91,7 +91,7 @@ export function Shell() {
             </svg>
           </span>
           <span className={styles.wordmark}>
-            mcphub<span>{t('app.tagline')}</span>
+            mcp-foyer<span>{t('app.tagline')}</span>
           </span>
         </NavLink>
 

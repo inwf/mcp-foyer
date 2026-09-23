@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 // The corpus is modelled on real MCP servers so that these tests judge

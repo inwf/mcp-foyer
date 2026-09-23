@@ -88,7 +88,7 @@ describe('the application', () => {
     await waitFor(() => expect(screen.getByText('已暴露工具')).toBeInTheDocument(), LAZY);
     // The server inventory also contains tool counts; assert the gateway
     // total in its metrics, where clients' exposed tools are reported.
-    expect(within(screen.getByLabelText('网关运行统计')).getByText('7')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('运行统计')).getByText('7')).toBeInTheDocument();
   });
 
   it('shows the servers page with its add button', async () => {

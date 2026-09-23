@@ -3,8 +3,8 @@ package gateway_test
 import (
 	"testing"
 
-	"mcphub/internal/config"
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/gateway"
 )
 
 func rules(stateful, stateless []string) config.Gateway {

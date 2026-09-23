@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"mcphub/internal/events"
+	"mcp-foyer/internal/events"
 )
 
 // WSPath is the event stream browsers connect to.

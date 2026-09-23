@@ -14,8 +14,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/config"
-	"mcphub/internal/events"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
 )
 
 // maxRequestBody bounds a request body. Without a bound, one request

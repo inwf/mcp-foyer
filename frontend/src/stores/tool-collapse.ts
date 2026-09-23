@@ -18,7 +18,7 @@ import { persist } from 'zustand/middleware';
 
 /** Named for the project so that it cannot collide with anything else
  *  served from the same origin. */
-const STORAGE_KEY = 'mcphub.tools.collapsed';
+const STORAGE_KEY = 'mcp-foyer.tools.collapsed';
 
 /** The key the gateway's own group is remembered under. Not a legal server
  *  name — the empty string cannot be one, and neither can anything with a

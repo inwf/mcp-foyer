@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/usage"
+	"mcp-foyer/internal/usage"
 )
 
 // handleGatewayUsage reports how the connected models have used the

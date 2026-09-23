@@ -1,4 +1,4 @@
-# 网关对模型提供的接口
+# mcp-foyer 对模型提供的接口
 
 默认 `tools/list` 只有四个系统工具。配置 `exposedTools` 后，被选中的上游工具
 也会出现在列表里；未暴露的工具仍可通过系统工具搜索、查看详情和调用。
@@ -10,7 +10,7 @@
 | `list_servers` | 无 | 配置的服务器名称、描述、状态、握手 title、工具/资源数量和错误 |
 | `search_tools` | `query` 或 `server`，可加 `limit`、`includeSchema`、`cursor` | `hits`、可选 `nextCursor` 和 `unmatched` |
 | `get_tool_details` | `server`、`tool` | 标识、对外名、描述、title、完整输入 schema、annotations |
-| `call_tool` | `server`、`tool`、可选 `args` | 上游原始结果，包括业务错误；`args` 不符合 schema 时在网关返回错误 |
+| `call_tool` | `server`、`tool`、可选 `args` | 上游原始结果，包括业务错误；`args` 不符合 schema 时直接返回错误，不转发 |
 
 已知目标时直接 `search_tools`，不必先列所有服务器。准备调用时可设置
 `includeSchema=true`，一次搜索就获得参数定义；已知工具也能单独取详情。
@@ -22,17 +22,18 @@
 
 ## 面向简单客户端的约定
 
-这个网关服务的客户端不一定把 `initialize.instructions` 交给模型，也不一定支持
+mcp-foyer 服务的客户端不一定把 `initialize.instructions` 交给模型，也不一定支持
 resources。因此：
 
 - 四个工具的 description 各自自足，不依赖 instructions 或资源里说过的规则；
-  模型可见的文本里统一只说「在/不在这个工具列表里」。
+  模型可见的文本里统一只说「在/不在这个工具列表里」，自称「this endpoint」，
+  不用产品名：客户端给这个服务器起什么名字由用户决定，模型不一定知道它叫 mcp-foyer。
 - `list_servers` 只报每台服务器的工具与资源数量，不报工具名：上百台服务器时
   概览不能变成目录。一台服务器有什么，用 `search_tools(server)` 分页浏览。
 - 服务器断连时的错误带上记录的原因（如 `command not found`），模型能转述给
   能修的人。
 - `call_tool` 在转发前按该工具缓存的输入 schema 校验 `args`，缺 required 字段
-  或类型不符时返回可读错误并指向 `get_tool_details`，不走一趟上游。校验只在网关
+  或类型不符时返回可读错误并指向 `get_tool_details`，不走一趟上游。校验只在
   能理解 schema 时进行：缓存里没有该工具、schema 解析失败、声明了不支持的
   JSON Schema 版本，都照常转发，上游仍是权威。
 - 系统工具的结构化输出同时以 JSON 文本放在 `content` 里（Go SDK 的规范
@@ -40,11 +41,11 @@ resources。因此：
 
 ## 使用计数（对模型不可见）
 
-网关记录模型对每个工具的使用：`search_tools` 返回给模型的那一页里出现的次数、
+mcp-foyer 记录模型对每个工具的使用：`search_tools` 返回给模型的那一页里出现的次数、
 被调用的次数（`call_tool` 与按发布名直接调用两条路径合计）、其中失败的次数和
 最近一次调用时间。**这些数字不进入任何系统工具的返回，也不进 instructions**，
 它们是给 operator 看的，用来决定暴露哪些工具、改哪些描述。管理 API 与 Web 界面
-发起的调用不计入。被网关拒绝的调用（未知服务器、参数不符）也不计，因为它没有
+发起的调用不计入。在转发前被拒绝的调用（未知服务器、参数不符）也不计，因为它没有
 到达工具。
 
 读取：`GET /api/gateway/usage`；清零：`DELETE /api/gateway/usage`。数据在
@@ -55,7 +56,7 @@ resources。因此：
 | 参数 | 规则 |
 | --- | --- |
 | `query` | 可省略；匹配工具名、工具描述、服务器名、握手名称、服务器描述，以及输入 schema 里的参数名与参数描述。名字按 `_`、`-` 和驼峰拆词并折叠英文复数，中文按相邻两字匹配 |
-| `server` | 可省略；准确的配置名，或 `mcphub`；仅给此项时浏览单台服务器 |
+| `server` | 可省略；准确的配置名，或 `mcp-foyer`；仅给此项时浏览单台服务器 |
 | `limit` | 默认 5，范围 1–20；两种 schema 模式相同，显式 0 也拒绝 |
 | `includeSchema` | 默认 false；true 时给所选候选附上完整输入 schema、title 和 annotations |
 | `cursor` | 上一页的 `nextCursor`；必须配合相同的 query 和 server |
@@ -96,7 +97,7 @@ resources。因此：
 `nextCursor` 仅在还有结果时返回，最后一页省略。翻页可以改变 `limit` 或
 `includeSchema`，但 query/server 必须保持相同含义；query 忽略大小写和词间空白。
 
-游标只包含位置以及查询和有序结果标识的哈希，不在网关保存快照。匹配结果增减、
+游标只包含位置以及查询和有序结果标识的哈希，不在服务端保存快照。匹配结果增减、
 顺序变化时拒绝旧游标，并提示去掉 cursor 重查；无关上游变化不影响它。schema
 更新且顺序未变时，下一页返回最新详情。翻页过程中每次都读现有缓存，不发上游
 发现请求，也不维护持久索引。
@@ -105,16 +106,16 @@ schema 不截断，也没有额外的 3 条硬上限或字节预算。需要控�
 可先取摘要或降低 limit；准备调用通常只需 1–3 个候选。详情继续不返回输出
 schema；调用结果原样透传。
 
-## 网关自身与资源
+## 自身与资源
 
-`search_tools(server="mcphub")` 浏览这四个系统工具，
-`get_tool_details(server="mcphub", tool="call_tool")` 取得注册时生成的真实 schema。
-跨上游搜索不会夹带系统工具。把网关本身当上游调用时，会提示直接调用系统工具；
+`search_tools(server="mcp-foyer")` 浏览这四个系统工具，
+`get_tool_details(server="mcp-foyer", tool="call_tool")` 取得注册时生成的真实 schema。
+跨上游搜索不会夹带系统工具。把 mcp-foyer 本身当上游调用时，会提示直接调用系统工具；
 `call_tool` 的实际目标由上游配置决定。
 
-- `hub://guide` 是完整指南，与 `mcphub guide` 共用一份文档。
-- `hub://servers/{名字}` 返回服务器状态、握手信息、描述及全部工具的名字到描述映射。
-- 上游资源通过 `hub://servers/{名字}/{转义后的上游 URI}` 读取。
+- `foyer://guide` 是完整指南，与 `mcp-foyer guide` 共用一份文档。
+- `foyer://servers/{名字}` 返回服务器状态、握手信息、描述及全部工具的名字到描述映射。
+- 上游资源通过 `foyer://servers/{名字}/{转义后的上游 URI}` 读取。
 
 服务器没有描述时省略该字段，不在每条结果中重复补写提示。服务器描述仍可从 Web
 或配置维护。

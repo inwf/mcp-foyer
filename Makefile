@@ -1,4 +1,4 @@
-# mcphub
+# mcp-foyer
 #
 # Two toolchains, and three steps that have to happen in order: the
 # frontend is built, its output is placed where the Go build can embed
@@ -15,7 +15,7 @@ FRONTEND := frontend
 # find it. Generated; not in version control.
 EMBED := $(BACKEND)/internal/webui/dist
 
-BIN := $(BACKEND)/bin/mcphub
+BIN := $(BACKEND)/bin/mcp-foyer
 
 # The tag that switches embedding on. A binary built without it works
 # and serves the API; it just has no web interface.
@@ -58,17 +58,17 @@ web: ## Build the web interface into the backend's embed directory
 	cp -R $(FRONTEND)/dist/. $(EMBED)/
 
 build-backend: ## Build the binary from whatever is in the embed directory
-	cd $(BACKEND) && go build -tags $(WEBUI_TAG) -o bin/mcphub ./cmd/mcphub
+	cd $(BACKEND) && go build -tags $(WEBUI_TAG) -o bin/mcp-foyer ./cmd/mcp-foyer
 
 # ===== development =====
 
 dev: ## Print how to run the two halves against each other
 	@echo "Two processes:"
-	@echo "  cd $(BACKEND)  && go run ./cmd/mcphub serve"
+	@echo "  cd $(BACKEND)  && go run ./cmd/mcp-foyer serve"
 	@echo "  cd $(FRONTEND) && pnpm dev"
 	@echo
-	@echo "The dev server proxies /api, /ws and /mcp to the gateway, and"
-	@echo "keeps the page's own origin so the gateway's websocket origin"
+	@echo "The dev server proxies /api, /ws and /mcp to the backend, and"
+	@echo "keeps the page's own origin so the backend's websocket origin"
 	@echo "check is exercised rather than bypassed."
 
 clean: ## Remove build output

@@ -1,7 +1,7 @@
 # 性能与 MCP 兼容性验证
 
 本轮针对个人本机、几十到上百个上游的工具发现路径。先区分三种成本：
-网关查目录和序列化的成本、上游进程与网络的成本、模型选择和调用工具的成本。
+mcp-foyer 查目录和序列化的成本、上游进程与网络的成本、模型选择和调用工具的成本。
 下面的基准覆盖第一种；不要据此推断真实上游的内存占用或模型任务成功率。
 
 ## 可重复的目录基准
@@ -99,11 +99,11 @@ make build
 用 pnpm 装在独立目录，然后运行这一个 Go 集成测试：
 
 ```sh
-MCPHUB_INTEROP_DIR="$(mktemp -d)"
-pnpm --dir "$MCPHUB_INTEROP_DIR" add --ignore-scripts @modelcontextprotocol/sdk@1.30.0
+MCP_FOYER_INTEROP_DIR="$(mktemp -d)"
+pnpm --dir "$MCP_FOYER_INTEROP_DIR" add --ignore-scripts @modelcontextprotocol/sdk@1.30.0
 cd backend
 go test -buildvcs=false ./internal/integration -run '^TestTypeScriptSDK' -count=1 -v \
-  -args -mcp-ts-sdk-dir="$MCPHUB_INTEROP_DIR"
+  -args -mcp-ts-sdk-dir="$MCP_FOYER_INTEROP_DIR"
 ```
 
 这段命令从仓库根目录执行。测试自动启动临时本机端口和测试上游，不用实际配置。
@@ -123,14 +123,14 @@ SDK 会解析 `tools/list`，再检查系统工具自查、带 schema 的分页�
 | 路径 | 建议记录 |
 | --- | --- |
 | 启动与重连 | API 就绪时间、首台和全部上游就绪时间、失败与重试数量 |
-| 空闲及持续运行 | 网关 RSS、全部子进程 RSS、CPU、文件描述符和连接数 |
+| 空闲及持续运行 | mcp-foyer 进程 RSS、全部子进程 RSS、CPU、文件描述符和连接数 |
 | 工具发现 | 首次/后续搜索、空结果、多词搜索、分页、schema 模式的 p50/p95 和响应字节数 |
 | 工具调用 | 单个调用和少量并发调用的延迟、超时、取消、错误率 |
 | 故障恢复 | 慢上游、断线、进程退出、工具列表变化时，其他上游是否仍能正常用 |
 
 个人使用先测试并发 1、2、5；负载用测试 MCP 服务器或无副作用的工具，避免业务操作
-污染数据。把网关与上游指标分开记录：100 个 Node/Python 进程的占用通常不能靠
-调整搜索接口解决。需要查网关热点时，可给基准加 `-cpuprofile` / `-memprofile`，
+污染数据。把 mcp-foyer 与上游指标分开记录：100 个 Node/Python 进程的占用通常不能靠
+调整搜索接口解决。需要查 mcp-foyer 的热点时，可给基准加 `-cpuprofile` / `-memprofile`，
 再用 `go tool pprof` 分析。
 
 如果要评价模型效率，固定模型、提示词、工具目录和一组真实任务，重复比较工具发现

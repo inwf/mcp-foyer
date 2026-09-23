@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/api"
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/api"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 // listening starts an API behind a connection-limited listener.

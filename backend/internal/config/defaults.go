@@ -16,7 +16,7 @@ func Default() Config {
 		Version: CurrentVersion,
 
 		Listen: Listen{
-			// Loopback rather than a wildcard address: mcphub's
+			// Loopback rather than a wildcard address: mcp-foyer's
 			// management API can change which commands get executed as
 			// child processes, so reaching it must be an explicit
 			// choice rather than a side effect of the default.

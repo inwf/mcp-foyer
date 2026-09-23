@@ -1,4 +1,4 @@
-// Package upstream manages connections to the MCP servers that mcphub
+// Package upstream manages connections to the MCP servers that mcp-foyer
 // proxies.
 //
 // Tools and resources are held as the SDK's own types rather than being

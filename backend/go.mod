@@ -1,4 +1,4 @@
-module mcphub
+module mcp-foyer
 
 go 1.25.0
 

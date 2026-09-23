@@ -12,7 +12,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // writeConfig puts content in a temporary file and returns its path.

@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
 )
 
 // defaultLogLimit bounds a log query that does not ask for a size. The

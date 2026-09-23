@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"mcphub/internal/config"
-	"mcphub/internal/logging"
-	"mcphub/internal/testmcp"
-	"mcphub/internal/upstream"
+	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/logging"
+	"mcp-foyer/internal/testmcp"
+	"mcp-foyer/internal/upstream"
 )
 
 // The streamable HTTP transport reaches a server someone else is already
@@ -99,7 +99,7 @@ func TestStreamableHTTPConnects(t *testing.T) {
 
 // Nothing was started, so there is no process to report. Reporting one
 // anyway — a PID of 0, or a start time of the year 1 — would be a fact
-// about mcphub's data structures rather than about the server.
+// about mcp-foyer's data structures rather than about the server.
 func TestStreamableHTTPReportsNoProcess(t *testing.T) {
 	conn, _ := connectHTTP(t, httpConfig(httpServer(t, modeFull, nil)))
 

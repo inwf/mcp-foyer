@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // RetryPolicy controls how a failed connection attempt is repeated.

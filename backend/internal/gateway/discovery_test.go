@@ -11,7 +11,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/gateway"
+	"mcp-foyer/internal/gateway"
 )
 
 type discoveryHit struct {
@@ -236,7 +236,7 @@ func TestCallToolResolvesAConfiguredUpstreamBeforeInterpretingItsName(t *testing
 	result := callSystemTool(t, session, gateway.ToolCallTool, map[string]any{
 		"server": gateway.Name, "tool": "read",
 	})
-	if result.IsError || !slices.Equal(ups.calls, []string{"mcphub/read"}) {
+	if result.IsError || !slices.Equal(ups.calls, []string{"mcp-foyer/read"}) {
 		t.Fatalf("an upstream configured under the gateway's name was not reached: %s, %v", resultText(result), ups.calls)
 	}
 }

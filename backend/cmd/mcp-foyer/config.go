@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 func newConfigCommand(global *globalOptions, stdout io.Writer) *cobra.Command {
@@ -29,7 +29,7 @@ func newConfigValidateCommand(global *globalOptions, stdout io.Writer) *cobra.Co
 		Use:   "validate [file]",
 		Short: "Check a configuration file and report every problem in it",
 		Long: "Read a configuration file and report everything wrong with it.\n\n" +
-			"Nothing is started and no gateway has to be running, so this is what to\n" +
+			"Nothing is started and no instance has to be running, so this is what to\n" +
 			"run before restarting one: a file that fails here would stop it from\n" +
 			"starting at all.\n\n" +
 			"With no argument the file this installation uses is checked, which is\n" +
@@ -62,11 +62,11 @@ func configToCheck(global *globalOptions, args []string) (string, error) {
 func validateConfig(path string, stdout io.Writer) error {
 	cfg, err := config.Load(path)
 
-	// A file that is not there is not a broken file. mcphub starts on the
+	// A file that is not there is not a broken file. mcp-foyer starts on the
 	// defaults and writes one when something is configured, so saying
 	// "invalid" here would be wrong.
 	if errors.Is(err, fs.ErrNotExist) {
-		fmt.Fprintf(stdout, "%s: not there yet; mcphub would start on the defaults\n", path)
+		fmt.Fprintf(stdout, "%s: not there yet; mcp-foyer would start on the defaults\n", path)
 		return nil
 	}
 

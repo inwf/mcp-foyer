@@ -7,7 +7,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"mcphub/internal/config"
+	"mcp-foyer/internal/config"
 )
 
 // Aggregate is what the gateway exposes to its clients: the upstream

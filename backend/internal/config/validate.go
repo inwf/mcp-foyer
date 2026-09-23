@@ -237,7 +237,7 @@ func validateServerName(v *validator, name string) {
 // needs exactly one of command and url, and setting the other is an
 // error rather than something to ignore — a url on a stdio server is
 // most likely a transport chosen by mistake, and silently dropping it
-// would leave mcphub talking to something other than what was meant.
+// would leave mcp-foyer talking to something other than what was meant.
 func validateServer(v *validator, field string, s MCPServer) {
 	var spawns bool
 
