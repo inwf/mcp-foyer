@@ -31,6 +31,12 @@ old-legacy/
 .claude/
 MEMORY.md
 REFACTOR_PLAN.md
+plans/
+
+# The model evaluation: API keys (same reason as data/ above), and a
+# tool that is not part of the product.
+eval-local/
+backend/cmd/mcp-foyer-eval/
 
 # Version control and editor leftovers.
 .git/

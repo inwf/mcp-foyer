@@ -5,6 +5,10 @@ REFACTOR_PLAN.md
 # ===== Working plans (local notes, not part of the public repository) =====
 plans/
 
+# ===== Model evaluation (local only: API settings, suite, results, and the tool) =====
+eval-local/
+backend/cmd/mcp-foyer-eval/
+
 # ===== Claude Code local state =====
 .claude/
 MEMORY.md
