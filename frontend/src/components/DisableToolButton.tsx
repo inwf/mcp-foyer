@@ -33,6 +33,8 @@ export function DisableToolButton({ server, tool, disabled }: {
   });
   return <IconButton
     size="small"
+    color={disabled ? 'green' : 'danger'}
+    variant="text"
     label={`${t(disabled ? 'tools.enableTool' : 'tools.disableTool')} ${tool}`}
     icon={disabled ? <CheckCircleOutlined aria-hidden /> : <StopOutlined aria-hidden />}
     loading={change.isPending}
