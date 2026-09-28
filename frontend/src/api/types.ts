@@ -48,8 +48,11 @@ export interface MCPServer {
   proxy?: string;
 
 
-  /** Empty or absent exposes every tool the server offers. */
+  /** Empty or absent exposes no tools. */
   exposedTools?: string[];
+  disabledTools?: string[];
+  readyPatterns?: string[];
+  readyTimeout?: Duration;
 }
 
 export interface Config {
@@ -159,6 +162,7 @@ export interface ServerView {
    *  list and the tools the server currently has, and only it holds
    *  both. Normally well below `status.toolCount` — that is the design. */
   exposedCount: number;
+  disabledCount?: number;
 }
 
 // ===== tools and resources =====
@@ -168,6 +172,7 @@ export interface Tool {
   title?: string;
   description?: string;
   inputSchema?: unknown;
+  disabled?: boolean;
   /** The name the gateway offers this tool under, absent when it is not
    *  offered at all. The gateway works it out — collisions between
    *  servers are resolved by renaming, so only something holding every
@@ -191,6 +196,7 @@ export interface AggregatedTool {
   exposed: string;
   description?: string;
   inputSchema?: unknown;
+  disabled?: boolean;
   /** Set when the list came from a search, and orders it. */
   score?: number;
 }

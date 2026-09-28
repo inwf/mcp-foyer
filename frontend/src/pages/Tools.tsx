@@ -22,6 +22,7 @@ import { StateBadge } from '@/components/StateBadge';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { Nothing } from '@/components/Nothing';
 import { ToolCallDialog } from '@/components/ToolCallDialog';
+import { DisableToolButton } from '@/components/DisableToolButton';
 import { useExposure } from '@/hooks/use-exposure';
 import { useToolLayoutStore, type ToolLayout } from '@/stores/tool-layout';
 import { SYSTEM_GROUP, useToolCollapseStore } from '@/stores/tool-collapse';
@@ -214,7 +215,7 @@ function ExposeSwitch({ tool, view }: { tool: AggregatedTool; view: ServerView }
         size="small"
         checked={on}
         loading={busy}
-        disabled={expose.isPending}
+        disabled={expose.isPending || Boolean(tool.disabled)}
         onChange={(next) =>
           expose.mutate({ server: view.name, config: view.config, tool: tool.tool, on: next })
         }
@@ -258,8 +259,8 @@ function ToolCard({
         {/* The name a client calls, where there is one. An unexposed
               tool has none, so its own name is the headline instead —
               rather than an empty line where a name should be. */}
-        <span className={styles.exposed}>{tool.exposed || tool.tool}</span>
-        {view ? <ExposeSwitch tool={tool} view={view} /> : null}
+        <span className={styles.exposed}>{tool.disabled ? <del>{tool.tool}</del> : (tool.exposed || tool.tool)}</span>
+        {view ? <><ExposeSwitch tool={tool} view={view} /><DisableToolButton server={view} tool={tool.tool} disabled={Boolean(tool.disabled)} /></> : null}
       </div>
 
       {tool.description ? <p className={styles.description}>{tool.description}</p> : null}
@@ -282,9 +283,9 @@ function ToolCard({
           // tool, so repeating it here would say nothing. What is worth
           // saying is the state, in words rather than only as a switch
           // and a dashed border.
-          <span className={styles.origin}>{t('server.notExposed')}</span>
+          <span className={styles.origin}>{t(tool.disabled ? 'tools.disabled' : 'server.notExposed')}</span>
         )}
-        <Button size="small" icon={<ThunderboltOutlined aria-hidden />} onClick={onCall}>
+        <Button size="small" disabled={Boolean(tool.disabled)} icon={<ThunderboltOutlined aria-hidden />} onClick={onCall}>
           {t('tools.call')}
         </Button>
       </div>
@@ -325,7 +326,7 @@ function ToolRow({
       className={cx(styles.row, motion.fade, !on && tool.server !== '' && styles.rowOff)}
       style={stagger(index)}
     >
-      <span className={styles.rowName}>{tool.exposed || tool.tool}</span>
+      <span className={styles.rowName}>{tool.disabled ? <del>{tool.tool}</del> : (tool.exposed || tool.tool)}</span>
 
       {/* The provenance column. A gateway tool has no server; an unexposed
           one has no second name to show, since the headline is already its
@@ -335,7 +336,7 @@ function ToolRow({
       ) : on ? (
         <span className={cx(styles.rowOrigin, renamed && styles.renamed)}>{tool.tool}</span>
       ) : (
-        <span className={styles.rowOrigin}>{t('server.notExposed')}</span>
+        <span className={styles.rowOrigin}>{t(tool.disabled ? 'tools.disabled' : 'server.notExposed')}</span>
       )}
 
       <span className={styles.rowDescription} title={tool.description}>
@@ -347,8 +348,8 @@ function ToolRow({
       </span>
 
       <span className={styles.rowActions}>
-        {view ? <ExposeSwitch tool={tool} view={view} /> : null}
-        <Button size="small" icon={<ThunderboltOutlined aria-hidden />} onClick={onCall}>
+        {view ? <><ExposeSwitch tool={tool} view={view} /><DisableToolButton server={view} tool={tool.tool} disabled={Boolean(tool.disabled)} /></> : null}
+        <Button size="small" disabled={Boolean(tool.disabled)} icon={<ThunderboltOutlined aria-hidden />} onClick={onCall}>
           {t('tools.call')}
         </Button>
       </span>

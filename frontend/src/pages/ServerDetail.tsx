@@ -19,6 +19,7 @@ import { keys } from '@/api/query';
 import type { Resource, ServerView, Tool } from '@/api/types';
 import { useServerActions } from '@/hooks/use-server-actions';
 import { useExposure } from '@/hooks/use-exposure';
+import { DisableToolButton } from '@/components/DisableToolButton';
 import { IconButton } from '@/components/IconButton';
 import { Panel } from '@/components/Panel';
 import { StateBadge } from '@/components/StateBadge';
@@ -187,7 +188,8 @@ function ToolsTab({ server }: { server: ServerView }) {
               aria-pressed={tool.name === active?.name}
               onClick={() => setSelected(tool.name)}
             >
-              <span className={styles.toolRowName}>{tool.name}</span>
+              <span className={styles.toolRowName}>{tool.disabled ? <del>{tool.name}</del> : tool.name}</span>
+              {tool.disabled ? <span>{t('tools.disabled')}</span> : null}
               {/* The exposed name is worth showing where it exists, because
                   it is what a client has to call and it is not always the
                   upstream name. */}
@@ -197,7 +199,7 @@ function ToolsTab({ server }: { server: ServerView }) {
               size="small"
               checked={Boolean(tool.exposed)}
               loading={expose.isPending && expose.variables?.tool === tool.name}
-              disabled={expose.isPending}
+              disabled={expose.isPending || Boolean(tool.disabled)}
               onChange={(on) =>
                 expose.mutate({
                   server: server.name,
@@ -208,6 +210,7 @@ function ToolsTab({ server }: { server: ServerView }) {
               }
               aria-label={`${t('server.expose')} ${tool.name}`}
             />
+            <DisableToolButton server={server} tool={tool.name} disabled={Boolean(tool.disabled)} />
           </div>
         ))}
       </Panel>
@@ -221,6 +224,7 @@ function ToolsTab({ server }: { server: ServerView }) {
               <Button
                 type="primary"
                 icon={<ThunderboltOutlined aria-hidden />}
+                disabled={Boolean(active.disabled)}
                 onClick={() => setCalling(active)}
               >
                 {t('tools.call')}

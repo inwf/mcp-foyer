@@ -200,6 +200,9 @@ export const zh = {
   },
 
   tools: {
+    disableTool: '禁用工具',
+    enableTool: '启用工具',
+    disabled: '已禁用',
     title: '工具',
     description: '按服务器浏览工具，调整暴露范围，或直接发起调用。',
     name: '工具名称',

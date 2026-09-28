@@ -29,7 +29,9 @@ export function ExposedToolsEditor({
   onChange,
   /** Absent when the server is being added and has no name yet. */
   server,
+  disabledTools = [],
 }: {
+  disabledTools?: string[];
   value?: string[];
   onChange?: (value: string[]) => void;
   server?: string | undefined;
@@ -75,7 +77,8 @@ export function ExposedToolsEditor({
     return <p className={styles.note}>{t('form.exposedToolsNone')}</p>;
   }
 
-  const all = value.length === names.length && missing.length === 0;
+  const available = names.filter((name) => !disabledTools.includes(name));
+  const all = available.length > 0 && available.every((name) => value.includes(name)) && missing.length === 0;
   const some = value.length > 0 && !all;
 
   return (
@@ -84,11 +87,8 @@ export function ExposedToolsEditor({
         <Checkbox
           checked={all}
           indeterminate={some}
-          onChange={(e) => onChange?.(e.target.checked ? names : [])}
+          onChange={(e) => onChange?.(e.target.checked ? available : [])}
         >
-          {/* An empty list means every tool, so clearing the boxes and
-              ticking them all end up meaning the same thing to the
-              gateway. Saying so here saves the surprise. */}
           {t('form.exposedToolsAll')}
         </Checkbox>
         <span className={styles.count}>
@@ -104,7 +104,7 @@ export function ExposedToolsEditor({
         onChange={(next) => onChange?.(next as string[])}
       >
         {(tools.data ?? []).map((tool) => (
-          <Checkbox key={tool.name} value={tool.name} className={cx(styles.item)}>
+          <Checkbox key={tool.name} value={tool.name} disabled={disabledTools.includes(tool.name)} className={cx(styles.item)}>
             <Tooltip title={tool.description}>
               <span className={styles.name}>{tool.name}</span>
             </Tooltip>

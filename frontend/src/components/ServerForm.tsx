@@ -79,10 +79,20 @@ function valuesFrom(name: string, server: MCPServer): ServerFormValues {
 
 /** Builds what the API takes, dropping everything the chosen transport
  *  does not use and everything left empty. */
-function serverFrom(values: ServerFormValues): MCPServer {
+export function serverFrom(values: ServerFormValues, original?: MCPServer): MCPServer {
   const spawns = values.transport === 'stdio';
 
+  // Preserve configuration fields with no corresponding form input.
+  const extras = { ...original };
+  for (const field of FIELD_NAMES) {
+    if (field !== 'name') delete extras[field];
+  }
+  if (!spawns) {
+    delete extras.readyPatterns;
+    delete extras.readyTimeout;
+  }
   const server: MCPServer = {
+    ...extras,
     transport: values.transport,
     enabled: values.enabled,
     timeout: values.timeout.trim(),
@@ -216,6 +226,7 @@ function FormBody({
 
   const [form] = Form.useForm<ServerFormValues>();
   const [transport, setTransport] = useState<Transport>(initial.transport);
+  const [original, setOriginal] = useState(editing?.server);
   const [failure, setFailure] = useState<string | null>(null);
 
   // The form and the JSON editor are two views of one server, not two
@@ -231,7 +242,7 @@ function FormBody({
     // view is not submitting, and someone who reaches for it because the
     // form cannot express what they need should not first be made to
     // satisfy the form.
-    setJson(JSON.stringify(serverFrom(form.getFieldsValue()), null, 2));
+    setJson(JSON.stringify(serverFrom(form.getFieldsValue(), original), null, 2));
     setJsonError(null);
     setMode('json');
   };
@@ -249,6 +260,7 @@ function FormBody({
 
     const name = editing ? editing.name : (read.name ?? form.getFieldValue('name') ?? '');
     form.setFieldsValue(valuesFrom(String(name), withServerDefaults(read.server)));
+    setOriginal(read.server);
     setTransport(withServerDefaults(read.server).transport);
     setJsonError(null);
     setMode('form');
@@ -285,7 +297,7 @@ function FormBody({
         return;
       }
       name = values.name.trim();
-      server = serverFrom(values);
+      server = serverFrom(values, original);
     }
 
     setFailure(null);
@@ -432,7 +444,7 @@ function FormBody({
           label={t('form.exposedTools')}
           extra={t('form.exposedToolsHint')}
         >
-          <ExposedToolsEditor server={editing?.name} />
+          <ExposedToolsEditor server={editing?.name} disabledTools={original?.disabledTools ?? []} />
         </Form.Item>
 
         <Form.Item name="enabled" label={t('form.enabled')} valuePropName="checked">
