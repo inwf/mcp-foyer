@@ -40,6 +40,9 @@ type serverRow struct {
 	// normally well below the tool count — printing the pair is what makes
 	// that visible instead of silent.
 	ExposedCount int `json:"exposedCount"`
+
+	// DisabledCount is how many of the server's tools are switched off.
+	DisabledCount int `json:"disabledCount"`
 }
 
 func newServersCommand(global *globalOptions, stdout io.Writer) *cobra.Command {
@@ -86,9 +89,14 @@ func newServersListCommand(client *clientOptions, stdout io.Writer) *cobra.Comma
 // The pair rather than either number alone: the gateway exposes nothing it
 // has not been told to expose, so "9" on its own reads as nine tools on
 // offer when the true answer may be none. "0/9" says both what the server
-// has and how much of it was asked for.
+// has and how much of it was asked for. Disabled tools are still among
+// the nine, so they are counted beside the pair when there are any.
 func exposure(server serverRow) string {
-	return fmt.Sprintf("%d/%d", server.ExposedCount, server.Status.ToolCount)
+	pair := fmt.Sprintf("%d/%d", server.ExposedCount, server.Status.ToolCount)
+	if server.DisabledCount == 0 {
+		return pair
+	}
+	return fmt.Sprintf("%s, %d disabled", pair, server.DisabledCount)
 }
 
 func listServers(cmd *cobra.Command, client *clientOptions, stdout io.Writer, verbose bool) error {

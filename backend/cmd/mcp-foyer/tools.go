@@ -49,6 +49,7 @@ type aggregatedTool struct {
 	Server      string         `json:"server"`
 	Tool        string         `json:"tool"`
 	Exposed     string         `json:"exposed"`
+	Disabled    bool           `json:"disabled"`
 	Description string         `json:"description"`
 	InputSchema map[string]any `json:"inputSchema"`
 
@@ -64,7 +65,9 @@ type toolSet struct {
 	upstream []aggregatedTool
 
 	// unexposed counts, per server, the tools that exist upstream but are
-	// not offered in the gateway's tools/list.
+	// not offered in the gateway's tools/list, and can still be reached
+	// through call_tool. A disabled tool is not among them: it cannot be
+	// reached at all.
 	//
 	// Listing only what is exposed would present a partial list as the
 	// whole one. Nothing is exposed unless it is asked for, so on an
@@ -149,7 +152,8 @@ func newToolsListCommand(client *clientOptions, stdout io.Writer) *cobra.Command
 			"--all lists every tool every server has, exposed or not, with the name\n" +
 			"each is exposed under. Nothing is exposed unless the configuration asks\n" +
 			"for it, so on an ordinary installation that is a much longer list — and\n" +
-			"it is the one to read when deciding what to expose.",
+			"it is the one to read when deciding what to expose. A disabled tool is\n" +
+			"listed there too, marked \"disabled\": no client can find or call it.",
 		Args: noPositionalArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			gateway, err := client.connect()
@@ -212,11 +216,13 @@ func fetchTools(ctx context.Context, gateway *gatewayClient, search string, all 
 }
 
 // fetchUnexposedCounts asks how many tools each server has that the
-// gateway is not offering.
+// gateway is not offering but a client can still reach.
 //
 // The tools endpoint cannot say: it reports what is exposed and has no
-// reason to know what was left out. The server list has both numbers,
-// having been given them by the one place that can compare them.
+// reason to know what was left out. The server list has every number,
+// having been given them by the one place that can compare them. A
+// disabled tool is subtracted along with the exposed ones, because
+// pointing a reader at call_tool for it would send them to a refusal.
 func fetchUnexposedCounts(ctx context.Context, gateway *gatewayClient) (map[string]int, error) {
 	var response serverListResponse
 	if err := gateway.get(ctx, "/servers", &response); err != nil {
@@ -225,7 +231,8 @@ func fetchUnexposedCounts(ctx context.Context, gateway *gatewayClient) (map[stri
 
 	out := map[string]int{}
 	for _, server := range response.Servers {
-		if hidden := server.Status.ToolCount - server.ExposedCount; hidden > 0 {
+		hidden := server.Status.ToolCount - server.ExposedCount - server.DisabledCount
+		if hidden > 0 {
 			out[server.Name] = hidden
 		}
 	}
@@ -345,15 +352,21 @@ func printTools(stdout io.Writer, tools toolSet, opts listOptions) error {
 // that is not exposed has no exposed name, and a table keyed on a column
 // that is blank half the time cannot be read down. The blank is a dash,
 // and what a dash means is said underneath — an unexplained one reads as
-// missing data rather than as a decision someone made.
+// missing data rather than as a decision someone made. A disabled tool
+// has no exposed name either, and says "disabled" there instead, which
+// needs no note.
 func printEveryServerTool(stdout io.Writer, tools []aggregatedTool) {
 	rows := newTable(stdout, "TOOL", "SERVER", "EXPOSED AS", "DESCRIPTION")
 	unexposed := 0
 	for _, tool := range tools {
-		if tool.Exposed == "" {
+		exposed := dash(tool.Exposed)
+		switch {
+		case tool.Disabled:
+			exposed = "disabled"
+		case tool.Exposed == "":
 			unexposed++
 		}
-		rows.row(tool.Tool, tool.Server, dash(tool.Exposed), summarise(tool.Description))
+		rows.row(tool.Tool, tool.Server, exposed, summarise(tool.Description))
 	}
 	rows.flush()
 
@@ -482,6 +495,7 @@ func showTool(stdout io.Writer, tool aggregatedTool, asJSON bool) error {
 			"tool":        tool.Tool,
 			"server":      tool.Server,
 			"system":      tool.system,
+			"disabled":    tool.Disabled,
 			"description": tool.Description,
 			"inputSchema": tool.InputSchema,
 		})
@@ -576,7 +590,8 @@ func newToolsCallCommand(client *clientOptions, stdout io.Writer) *cobra.Command
 			"called by their own names.\n\n" +
 			"A tool that is not exposed can be called as \"server/tool\". Exposure\n" +
 			"decides what a client is offered, not what exists: this command talks to\n" +
-			"the server directly, exactly as call_tool does.\n\n" +
+			"the server directly, exactly as call_tool does. A disabled tool cannot\n" +
+			"be called this way or any other until it is enabled again.\n\n" +
 			"Arguments can be given as one JSON object with --args, as repeated\n" +
 			"--arg key=value pairs, or both; a pair overrides the same key in the\n" +
 			"JSON. A pair's value is converted using the type the tool's schema\n" +
@@ -676,6 +691,9 @@ func handle(tool aggregatedTool) string {
 // exposedAs renders the name a client would call the tool by, saying what
 // the absence of one means rather than printing a bare dash.
 func exposedAs(tool aggregatedTool) string {
+	if tool.Disabled {
+		return "- (disabled; no client can find or call it until it is enabled in the web interface)"
+	}
 	if tool.Exposed != "" {
 		return tool.Exposed
 	}

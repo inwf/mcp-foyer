@@ -167,6 +167,28 @@ func TestApplyDoesNotRestartAServerForAnExposureChange(t *testing.T) {
 	}
 }
 
+// Disabling a tool is the same kind of change: the gateway enforces it,
+// and the connection never sees it.
+func TestApplyDoesNotRestartAServerForADisabledTool(t *testing.T) {
+	m, _ := managerFixture(t)
+	cfg := configWith(t, map[string]string{"alpha": modeFull})
+	m.Apply(cfg)
+	before, _ := m.Get("alpha")
+
+	server := cfg.MCPServers["alpha"]
+	server.DisabledTools = []string{"echo"}
+	cfg.MCPServers["alpha"] = server
+
+	_, _, changed := m.Apply(cfg)
+
+	if len(changed) != 0 {
+		t.Errorf("changed = %v, want none; disabling one tool restarted the server", changed)
+	}
+	if after, _ := m.Get("alpha"); before != after {
+		t.Error("the connection was rebuilt for a change the connection cannot see")
+	}
+}
+
 func TestConnectAllBringsUpEveryEnabledServer(t *testing.T) {
 	m, _ := managerFixture(t)
 	m.Apply(configWith(t, map[string]string{"alpha": modeFull, "bravo": modeToolsOnly}))

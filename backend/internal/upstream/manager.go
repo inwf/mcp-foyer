@@ -317,20 +317,18 @@ func (m *Manager) publish(server string, kind ChangeKind) {
 }
 
 // sameServer reports whether two configurations describe the same live
-// connection. Fields that only affect presentation are excluded, so
-// renaming a description does not tear down a working session.
-// sameServer reports whether two configurations describe the same live
 // connection.
 //
 // The fields cleared here are the ones a connection never sees, so a
-// change to them must not cost a reconnect. Description is
-// metadata. Exposure is decided entirely on the gateway side — this
-// package does not read the allow list at all — and rebuilding the
-// connection for it would kill and respawn a child process every time
-// someone flipped one tool on.
+// change to them must not cost a reconnect. Description is metadata.
+// Exposure and disabling are decided entirely on the gateway side —
+// this package does not read either list — and rebuilding the
+// connection for them would kill and respawn a child process every time
+// someone flipped one tool on or off.
 func sameServer(a, b config.MCPServer) bool {
 	a.Description, b.Description = "", ""
 	a.ExposedTools, b.ExposedTools = nil, nil
+	a.DisabledTools, b.DisabledTools = nil, nil
 	return reflect.DeepEqual(a, b)
 }
 

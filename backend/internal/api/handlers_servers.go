@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,11 @@ type ServerView struct {
 	// below Status.ToolCount — that is the design, not a fault, and the
 	// number is reported so the difference is visible rather than silent.
 	Exposed int `json:"exposedCount"`
+
+	// Disabled counts the tools this server offers that the configuration
+	// has switched off. Like Exposed, it counts what the server offers now:
+	// a listed name whose tool has since disappeared switches nothing off.
+	Disabled int `json:"disabledCount"`
 }
 
 // ===== step 60: server CRUD =====
@@ -66,10 +72,11 @@ func (a *API) viewOf(name string, server config.MCPServer, statuses map[string]u
 		status = upstream.Status{Name: name, State: upstream.StateDisconnected}
 	}
 	return ServerView{
-		Name:    name,
-		Config:  wireServer{server.Redact()},
-		Status:  status,
-		Exposed: a.exposedCount(name, server),
+		Name:     name,
+		Config:   wireServer{server.Redact()},
+		Status:   status,
+		Exposed:  a.exposedCount(name, server),
+		Disabled: a.disabledCount(name, server),
 	}
 }
 
@@ -79,6 +86,20 @@ func (a *API) exposedCount(name string, server config.MCPServer) int {
 		return 0
 	}
 	return len(gateway.FilterTools(a.opts.Upstreams.Tools()[name], server.ExposedTools))
+}
+
+// disabledCount counts the tools a server offers that are switched off.
+func (a *API) disabledCount(name string, server config.MCPServer) int {
+	if a.opts.Upstreams == nil {
+		return 0
+	}
+	count := 0
+	for _, tool := range a.opts.Upstreams.Tools()[name] {
+		if tool != nil && slices.Contains(server.DisabledTools, tool.Name) {
+			count++
+		}
+	}
+	return count
 }
 
 func (a *API) handleGetServer(c *gin.Context) {
@@ -138,10 +159,11 @@ func (a *API) handleCreateServer(c *gin.Context) {
 	a.applyConfig(c)
 
 	c.JSON(http.StatusCreated, ServerView{
-		Name:    body.Name,
-		Config:  wireServer{body.Server.Redact()},
-		Status:  upstream.Status{Name: body.Name, State: upstream.StateDisconnected},
-		Exposed: a.exposedCount(body.Name, body.Server.MCPServer),
+		Name:     body.Name,
+		Config:   wireServer{body.Server.Redact()},
+		Status:   upstream.Status{Name: body.Name, State: upstream.StateDisconnected},
+		Exposed:  a.exposedCount(body.Name, body.Server.MCPServer),
+		Disabled: a.disabledCount(body.Name, body.Server.MCPServer),
 	})
 }
 
@@ -176,10 +198,11 @@ func (a *API) handleUpdateServer(c *gin.Context) {
 	// the UI, when what is true is that the server is still in whatever
 	// state it was before the edit.
 	c.JSON(http.StatusOK, ServerView{
-		Name:    name,
-		Config:  wireServer{updated.Redact()},
-		Status:  a.statusOfServer(name),
-		Exposed: a.exposedCount(name, updated),
+		Name:     name,
+		Config:   wireServer{updated.Redact()},
+		Status:   a.statusOfServer(name),
+		Exposed:  a.exposedCount(name, updated),
+		Disabled: a.disabledCount(name, updated),
 	})
 }
 
@@ -307,6 +330,11 @@ type ServerTool struct {
 	Description string `json:"description,omitempty"`
 	InputSchema any    `json:"inputSchema,omitempty"`
 	Exposed     string `json:"exposed,omitempty"`
+
+	// Disabled marks a tool the configuration has switched off. It is
+	// listed so that it can be switched back on, and it cannot be called
+	// here any more than through the MCP endpoint.
+	Disabled bool `json:"disabled,omitempty"`
 }
 
 func (a *API) handleServerTools(c *gin.Context) {
@@ -316,9 +344,10 @@ func (a *API) handleServerTools(c *gin.Context) {
 		return
 	}
 
+	cfg := a.opts.Configs.Get()
 	var names gateway.NameMap
 	if a.opts.Upstreams != nil {
-		names = gateway.PublishedNames(a.opts.Upstreams.Tools(), a.opts.Configs.Get())
+		names = gateway.PublishedNames(a.opts.Upstreams.Tools(), cfg)
 	}
 
 	tools := nonNilTools(conn.Tools())
@@ -331,6 +360,7 @@ func (a *API) handleServerTools(c *gin.Context) {
 			Description: tool.Description,
 			InputSchema: tool.InputSchema,
 			Exposed:     exposed,
+			Disabled:    gateway.IsDisabled(cfg, name, tool.Name),
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"tools": out})
@@ -350,6 +380,16 @@ func (a *API) handleCallServerTool(c *gin.Context) {
 		return
 	}
 
+	// Refused here as well as on the MCP endpoint. The web interface and
+	// the CLI call through this route, and a tool the operator switched
+	// off is off for them too.
+	tool := c.Param("tool")
+	if gateway.IsDisabled(a.opts.Configs.Get(), conn.Name(), tool) {
+		fail(c, Conflict(fmt.Sprintf("%q on %q is disabled; enable it before calling it",
+			tool, conn.Name())))
+		return
+	}
+
 	var body struct {
 		Arguments map[string]any `json:"arguments"`
 	}
@@ -358,7 +398,6 @@ func (a *API) handleCallServerTool(c *gin.Context) {
 		return
 	}
 
-	tool := c.Param("tool")
 	result, err := conn.CallTool(c.Request.Context(), tool, body.Arguments)
 	if err != nil {
 		fail(c, &Error{

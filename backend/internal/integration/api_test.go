@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -289,6 +290,92 @@ func exposeOnly(t *testing.T, stack *stack, server string, tools ...string) {
 		t.Fatalf("narrow the allow list for %s: %v", server, err)
 	}
 	stack.Gateway.Sync()
+}
+
+// disable switches one tool off the way the web interface does: out of
+// the exposed list and into the disabled one, in a single save.
+func disable(t *testing.T, stack *stack, server, tool string) {
+	t.Helper()
+
+	if _, err := stack.Configs.Update(func(c *config.Config) error {
+		entry := c.MCPServers[server]
+		entry.ExposedTools = slices.DeleteFunc(slices.Clone(entry.ExposedTools),
+			func(name string) bool { return name == tool })
+		entry.DisabledTools = append(entry.DisabledTools, tool)
+		c.MCPServers[server] = entry
+		return nil
+	}); err != nil {
+		t.Fatalf("disable %s/%s: %v", server, tool, err)
+	}
+	stack.Gateway.Sync()
+}
+
+// The management views are where a disabled tool is switched back on, so
+// they still list it and say that it is disabled. The client's view, and
+// the count of what a server exposes, leave it out.
+func TestTheAPIShowsADisabledToolAsDisabled(t *testing.T) {
+	stack := start(t, map[string]string{"files": "full"})
+	disable(t, stack, "files", "sleep")
+
+	var onServer struct {
+		Tools []api.ServerTool `json:"tools"`
+	}
+	stack.apiGet(t, "/api/servers/files/tools", &onServer)
+	var sleep *api.ServerTool
+	for i, tool := range onServer.Tools {
+		if tool.Name == "sleep" {
+			sleep = &onServer.Tools[i]
+		}
+	}
+	if sleep == nil {
+		t.Fatalf("the server's tool list left out the disabled tool: %+v", onServer.Tools)
+	}
+	if !sleep.Disabled || sleep.Exposed != "" {
+		t.Errorf("sleep = %+v, want it disabled with no exposed name", *sleep)
+	}
+
+	var everything struct {
+		Tools []api.AggregatedTool `json:"tools"`
+	}
+	stack.apiGet(t, "/api/tools?limit=100&all=true", &everything)
+	for _, tool := range everything.Tools {
+		if disabled := tool.Tool == "sleep"; tool.Disabled != disabled {
+			t.Errorf("%s/%s has disabled = %v, want %v", tool.Server, tool.Tool, tool.Disabled, disabled)
+		}
+	}
+
+	var offered struct {
+		Tools []api.AggregatedTool `json:"tools"`
+	}
+	stack.apiGet(t, "/api/tools?limit=100", &offered)
+	for _, tool := range offered.Tools {
+		if tool.Tool == "sleep" {
+			t.Errorf("the client's view offers the disabled tool: %+v", tool)
+		}
+	}
+
+	var servers struct {
+		Servers []api.ServerView `json:"servers"`
+	}
+	stack.apiGet(t, "/api/servers", &servers)
+	if len(servers.Servers) != 1 || servers.Servers[0].Disabled != 1 {
+		t.Errorf("servers = %+v, want files with one disabled tool", servers.Servers)
+	}
+}
+
+// The web interface's call dialog and the CLI both call through this
+// route, and a tool switched off is off for them as well.
+func TestTheAPIRefusesToCallADisabledTool(t *testing.T) {
+	stack := start(t, map[string]string{"files": "full"})
+	disable(t, stack, "files", "echo")
+
+	var refused api.Envelope
+	stack.apiDo(t, http.MethodPost, "/api/servers/files/tools/echo/call",
+		map[string]any{"arguments": map[string]any{"message": "anyone there"}},
+		http.StatusConflict, &refused)
+	if refused.Error.Code != api.CodeConflict || !strings.Contains(refused.Error.Message, "disabled") {
+		t.Errorf("error = %+v, want a conflict saying the tool is disabled", refused.Error)
+	}
 }
 
 func TestTheAPIAggregatesResourcesAcrossServers(t *testing.T) {

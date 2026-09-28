@@ -919,6 +919,7 @@ type serverResource struct {
 	Name        string            `json:"name"`
 	State       upstream.State    `json:"state"`
 	Description string            `json:"description"`
+	ToolCount   int               `json:"toolCount"`
 	Tools       map[string]string `json:"tools"`
 }
 

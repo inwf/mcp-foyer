@@ -125,10 +125,17 @@ func decodeObjectSchema(schema any) (map[string]any, bool) {
 
 // ExposedByServer keeps only the tools each server's configuration
 // exposes, dropping the servers left with none.
+//
+// A disabled tool is left out even if it is somehow listed as exposed:
+// validation refuses that configuration, but this is what decides what a
+// client is offered, and it must not depend on every writer having run
+// the validation first.
 func ExposedByServer(all map[string][]*mcp.Tool, cfg config.Config) map[string][]*mcp.Tool {
 	out := make(map[string][]*mcp.Tool, len(all))
 	for server, tools := range all {
-		if allowed := FilterTools(tools, cfg.MCPServers[server].ExposedTools); len(allowed) > 0 {
+		entry := cfg.MCPServers[server]
+		allowed := DisabledTools(FilterTools(tools, entry.ExposedTools), entry.DisabledTools)
+		if len(allowed) > 0 {
 			out[server] = allowed
 		}
 	}

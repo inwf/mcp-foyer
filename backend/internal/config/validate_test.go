@@ -166,6 +166,15 @@ func TestValidateAcceptsMeaningfulEdgeValues(t *testing.T) {
 		{"wildcard as listen address", func(c *config.Config) { c.Listen.Host = "0.0.0.0" }},
 		{"IPv6 as listen address", func(c *config.Config) { c.Listen.Host = "::1" }},
 		{"port zero asks for any free port", func(c *config.Config) { c.Listen.Port = 0 }},
+		// Disabling is independent of what the server offers right now: a
+		// name for a tool it no longer has is kept, so that the tool stays
+		// off if it comes back.
+		{"a disabled tool that is not exposed, or no longer offered", func(c *config.Config) {
+			c.MCPServers = map[string]config.MCPServer{"srv": {
+				Transport: config.TransportStdio, Command: "npx", Timeout: time.Minute,
+				ExposedTools: []string{"read"}, DisabledTools: []string{"write", "gone"},
+			}}
+		}},
 	}
 
 	for _, tt := range tests {
@@ -278,6 +287,28 @@ func TestValidateServerRules(t *testing.T) {
 				t.Errorf("reported %v, want a problem on %q", fields, tt.field)
 			}
 		})
+	}
+}
+
+// A tool that is both exposed and disabled has no reading that is right
+// for everyone, so it is refused. The problem is reported on
+// exposedTools, the list a form lets someone tick, and it names the tool
+// so they know which box.
+func TestAToolCannotBeBothExposedAndDisabled(t *testing.T) {
+	cfg := config.Default()
+	cfg.MCPServers = map[string]config.MCPServer{"srv": {
+		Transport: config.TransportStdio, Command: "npx", Timeout: time.Minute,
+		ExposedTools:  []string{"read", "write", "write"},
+		DisabledTools: []string{"write", "delete"},
+	}}
+
+	err := cfg.Validate()
+	fields := fieldsOf(t, err)
+	if len(fields) != 1 || fields[0] != "mcpServers.srv.exposedTools" {
+		t.Fatalf("reported %v, want one problem on mcpServers.srv.exposedTools", fields)
+	}
+	if !strings.Contains(err.Error(), `"write"`) || strings.Contains(err.Error(), `"read"`) {
+		t.Errorf("the message should name the tool in both lists and only that one: %v", err)
 	}
 }
 

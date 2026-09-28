@@ -213,7 +213,7 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 			OpenWorldHint: boolPtr(true),
 		},
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, in callToolInput) (*mcp.CallToolResult, any, error) {
-		result, err := callTool(ctx, ups, use, in)
+		result, err := callTool(ctx, ups, cfgs, use, in)
 		if err != nil {
 			return toolError(err), nil, nil
 		}
@@ -230,13 +230,14 @@ func (noUsage) Called(string, string, bool) {}
 func listServers(ups Upstreams, cfgs Configs) listServersOutput {
 	cfg := cfgs.Get()
 	statuses := ups.Statuses()
+	all := ups.Tools()
 	out := listServersOutput{Servers: make([]ServerSummary, 0, len(statuses))}
 	for _, status := range statuses {
 		summary := ServerSummary{
 			Name:          status.Name,
 			State:         string(status.State),
 			Description:   cfg.MCPServers[status.Name].Description,
-			ToolCount:     status.ToolCount,
+			ToolCount:     usableCount(all, cfg, status.Name, status.ToolCount),
 			ResourceCount: status.ResourceCount,
 			Error:         status.Error,
 		}
@@ -263,10 +264,14 @@ func getToolDetails(ups Upstreams, cfgs Configs, own OwnTools, server, tool stri
 	if err := requireServer(ups, server); err != nil {
 		return getToolDetailsOutput{}, withSystemToolHint(err, tool)
 	}
+	cfg := cfgs.Get()
+	if IsDisabled(cfg, server, tool) {
+		return getToolDetailsOutput{}, disabledError(server, tool)
+	}
 	all := ups.Tools()
 	for _, candidate := range all[server] {
 		if candidate != nil && candidate.Name == tool {
-			exposed, _ := PublishedNames(all, cfgs.Get()).Exposed(server, tool)
+			exposed, _ := PublishedNames(all, cfg).Exposed(server, tool)
 			return describeTool(server, candidate, exposed), nil
 		}
 	}
@@ -285,9 +290,14 @@ func describeTool(server string, tool *mcp.Tool, exposed string) getToolDetailsO
 	}
 }
 
-func callTool(ctx context.Context, ups Upstreams, use Usage, in callToolInput) (*mcp.CallToolResult, error) {
+func callTool(ctx context.Context, ups Upstreams, cfgs Configs, use Usage, in callToolInput) (*mcp.CallToolResult, error) {
 	if err := requireServer(ups, in.Server); err != nil {
 		return nil, withSystemToolHint(err, in.Tool)
+	}
+	// Read at call time: the operator's switch takes effect on the next
+	// call, without waiting for anything to be republished.
+	if IsDisabled(cfgs.Get(), in.Server, in.Tool) {
+		return nil, disabledError(in.Server, in.Tool)
 	}
 	// Checked against the cached schema when there is one. The upstream is
 	// authoritative: cached discovery metadata can lag a tools/list_changed
@@ -338,7 +348,8 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 	}
 
 	cfg := cfgs.Get()
-	all := ups.Tools()
+	// Disabled tools are not there to be found, by a query or by browsing.
+	all := UsableTools(ups.Tools(), cfg)
 	// Names are assigned over the complete exposed set before filtering;
 	// otherwise a collision on another server would give the wrong name.
 	names := PublishedNames(all, cfg)

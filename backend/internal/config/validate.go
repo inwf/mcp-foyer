@@ -239,6 +239,10 @@ func validateServerName(v *validator, name string) {
 // most likely a transport chosen by mistake, and silently dropping it
 // would leave mcp-foyer talking to something other than what was meant.
 func validateServer(v *validator, field string, s MCPServer) {
+	// Before the transport, which ends validation early when it is
+	// unknown: this rule does not depend on it.
+	validateToolLists(v, field, s)
+
 	var spawns bool
 
 	switch s.Transport {
@@ -283,6 +287,30 @@ func validateServer(v *validator, field string, s MCPServer) {
 
 	v.positiveDuration(field+".timeout", s.Timeout)
 	validateReadiness(v, field, s, spawns)
+}
+
+// validateToolLists rejects a tool that is both exposed and disabled.
+//
+// Either way of reading such an entry would surprise someone: honouring
+// the exposure offers a tool the operator switched off, and honouring
+// the disabling leaves an exposure in the file that silently does
+// nothing. Asking is the only reading that is never wrong.
+//
+// It is reported on exposedTools because that is the list a person
+// edits by ticking boxes, so it is the field a form can mark.
+func validateToolLists(v *validator, field string, s MCPServer) {
+	if len(s.DisabledTools) == 0 {
+		return
+	}
+	reported := map[string]bool{}
+	for _, name := range s.ExposedTools {
+		if reported[name] || !slices.Contains(s.DisabledTools, name) {
+			continue
+		}
+		reported[name] = true
+		v.add(field+".exposedTools",
+			"names %q, which disabledTools also names; a disabled tool cannot be exposed", name)
+	}
 }
 
 // validateReadiness checks the ready patterns here rather than at dial

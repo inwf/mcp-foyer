@@ -157,6 +157,76 @@ func exposingOneTool(t *testing.T) (address string, cleanup func()) {
 	return address, func() { stop(); <-done }
 }
 
+// disablingSleep is exposingOneTool with "sleep" switched off, which leaves
+// one tool exposed, one disabled, and two ("grow" and "fail") that are
+// neither.
+func disablingSleep(t *testing.T) (address string, cleanup func()) {
+	t.Helper()
+
+	base, stop, done := running(t, func(cfg *config.Config) {
+		server, err := testmcp.ServerConfig(testmcp.ModeFull)
+		if err != nil {
+			t.Fatalf("build the upstream configuration: %v", err)
+		}
+		server.ExposedTools = []string{"echo"}
+		server.DisabledTools = []string{"sleep"}
+		cfg.MCPServers = map[string]config.MCPServer{"probe": server}
+	})
+
+	address = hostPort(t, base)
+	waitForState(t, address, "probe", "connected")
+	return address, func() { stop(); <-done }
+}
+
+// A disabled tool has no exposed name, like an unexposed one, but a dash
+// and the note under it would say call_tool reaches it, which it does not.
+func TestToolsListAllMarksADisabledTool(t *testing.T) {
+	address, cleanup := disablingSleep(t)
+	defer cleanup()
+
+	code, stdout, stderr := execute(t, "tools", "list", "--all", "--address", address)
+	if code != exitOK {
+		t.Fatalf("exit code = %d, want %d\nstderr: %s", code, exitOK, stderr)
+	}
+
+	if row := rowFor(t, stdout, "sleep"); !strings.Contains(row, "disabled") {
+		t.Errorf("the disabled tool does not say so: %q", row)
+	}
+	if !strings.Contains(stdout, "2 of these tools are not exposed") {
+		t.Errorf("the note about unexposed tools counts the disabled one:\n%s", stdout)
+	}
+}
+
+// The count of tools left out of the list is followed by how to reach
+// them, so it must not include one that cannot be reached.
+func TestToolsListDoesNotCountADisabledToolAsLeftOut(t *testing.T) {
+	address, cleanup := disablingSleep(t)
+	defer cleanup()
+
+	_, stdout, _ := execute(t, "tools", "list", "--address", address)
+
+	if !strings.Contains(stdout, "2 more upstream tools are not exposed") {
+		t.Errorf("the count of left-out tools includes the disabled one:\n%s", stdout)
+	}
+}
+
+// The command reaches an upstream through the management API, which
+// refuses a disabled tool, and the refusal has to reach the terminal.
+func TestToolsCallRefusesADisabledTool(t *testing.T) {
+	address, cleanup := disablingSleep(t)
+	defer cleanup()
+
+	code, _, stderr := execute(t, "tools", "call", "probe/sleep",
+		"--arg", "seconds=0", "--address", address)
+
+	if code != exitFailure {
+		t.Errorf("exit code = %d, want %d", code, exitFailure)
+	}
+	if !strings.Contains(stderr, "disabled") {
+		t.Errorf("the refusal does not say the tool is disabled:\n%s", stderr)
+	}
+}
+
 // With everything exposed there is nothing left out, and a note saying so
 // would be noise.
 func TestToolsListIsQuietWhenNothingIsHidden(t *testing.T) {

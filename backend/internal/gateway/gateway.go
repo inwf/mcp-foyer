@@ -318,6 +318,13 @@ func (g *Gateway) forward(ctx context.Context, req *mcp.CallToolRequest) (*mcp.C
 		// which happens when a server disconnects mid-conversation.
 		return toolError(fmt.Errorf("tool %q is no longer available; list the tools again", name)), nil
 	}
+	// The route table is rebuilt by Sync, which runs after the
+	// configuration has changed rather than with it. Checking the
+	// configuration here refuses a disabled tool from the moment it is
+	// switched off, not from the moment the table catches up.
+	if IsDisabled(g.opts.Configs.Get(), route.Server, route.Tool) {
+		return toolError(disabledError(route.Server, route.Tool)), nil
+	}
 
 	result, err := g.opts.Upstreams.CallTool(ctx, route.Server, route.Tool, req.Params.Arguments)
 	if err != nil {
@@ -411,13 +418,18 @@ func (g *Gateway) describeServer(server, uri string) (*mcp.ReadResourceResult, e
 			continue
 		}
 
+		cfg := g.opts.Configs.Get()
+		all := g.opts.Upstreams.Tools()
 		described := serverDescription{Status: status}
-		if entry, ok := g.opts.Configs.Get().MCPServers[server]; ok {
+		// The count and the table below describe what a model can use,
+		// so neither includes a disabled tool.
+		described.ToolCount = usableCount(all, cfg, server, status.ToolCount)
+		if entry, ok := cfg.MCPServers[server]; ok {
 			if entry.Description != "" {
 				described.Description = entry.Description
 			}
 		}
-		if tools := g.opts.Upstreams.Tools()[server]; len(tools) > 0 {
+		if tools := DisabledTools(all[server], cfg.MCPServers[server].DisabledTools); len(tools) > 0 {
 			described.Tools = make(map[string]string, len(tools))
 			for _, tool := range tools {
 				if tool == nil || tool.Name == "" {

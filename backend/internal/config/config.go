@@ -265,4 +265,15 @@ type MCPServer struct {
 	// The strict default is deliberate — see gateway.FilterTools for why,
 	// and for why it does not make the unnamed tools unreachable.
 	ExposedTools []string `yaml:"exposedTools,omitempty"`
+
+	// DisabledTools names the tools of this server that cannot be used at
+	// all: they are never offered, search does not find them, and a call
+	// to one is refused. It is how an operator takes one tool out of
+	// reach without removing its server.
+	//
+	// It is a different thing from exposure. A tool that is not exposed
+	// is still found and called on demand; a disabled one is not. So a
+	// name may not appear in both lists — validation rejects it — and an
+	// absent list means the same as an empty one: nothing is disabled.
+	DisabledTools []string `yaml:"disabledTools,omitempty"`
 }

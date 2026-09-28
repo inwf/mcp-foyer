@@ -26,6 +26,11 @@ type AggregatedTool struct {
 	// Exposed is the name the gateway offers it under.
 	Exposed string `json:"exposed"`
 
+	// Disabled marks a tool the configuration has switched off. Only a
+	// request for every tool can include one: this is where it is switched
+	// back on, while to a client it is not there at all.
+	Disabled bool `json:"disabled,omitempty"`
+
 	Description string `json:"description,omitempty"`
 	InputSchema any    `json:"inputSchema,omitempty"`
 
@@ -62,22 +67,23 @@ func (a *API) handleAggregatedTools(c *gin.Context) {
 	// exposure is decided, so showing only what is already exposed leaves
 	// nothing to decide about — and on a fresh installation, nothing at
 	// all. The unexposed ones come back with an empty exposed name, which
-	// is the same signal search_tools gives.
+	// is the same signal search_tools gives. A disabled tool comes back
+	// too, marked, since this is also where it is switched back on.
 	all, err := queryBool(c, "all", false)
 	if err != nil {
 		fail(c, err)
 		return
 	}
 
+	offered := byServer
+	if !all {
+		offered = gateway.ExposedByServer(byServer, cfg)
+	}
+
 	tools := make([]AggregatedTool, 0, names.Len())
 
-	for server, list := range byServer {
-		serverCfg := cfg.MCPServers[server]
-		offered := list
-		if !all {
-			offered = gateway.FilterTools(list, serverCfg.ExposedTools)
-		}
-		for _, tool := range offered {
+	for server, list := range offered {
+		for _, tool := range list {
 			if tool == nil || tool.Name == "" {
 				continue
 			}
@@ -86,6 +92,7 @@ func (a *API) handleAggregatedTools(c *gin.Context) {
 				Server:      server,
 				Tool:        tool.Name,
 				Exposed:     exposed,
+				Disabled:    gateway.IsDisabled(cfg, server, tool.Name),
 				Description: tool.Description,
 				InputSchema: tool.InputSchema,
 			})

@@ -34,6 +34,7 @@ func (s MCPServer) Clone() MCPServer {
 
 	out.Args = slices.Clone(s.Args)
 	out.ExposedTools = slices.Clone(s.ExposedTools)
+	out.DisabledTools = slices.Clone(s.DisabledTools)
 	out.Env = maps.Clone(s.Env)
 	out.Headers = maps.Clone(s.Headers)
 

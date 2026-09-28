@@ -88,6 +88,16 @@ claude mcp add --transport http mcp-foyer http://127.0.0.1:7788/mcp
 mcp-foyer tools list --all
 ```
 
+## 禁用单个工具
+
+工具页和服务器详情页提供「禁用工具」按钮。禁用后，模型无法搜索、查看详情或调用
+这个工具，工具数量也不再包含它。Web 界面保留工具记录并标记「已禁用」，方便重新启用；
+Web 和 CLI 的调用同样会被拒绝。
+
+禁用写入 `mcpServers.<名字>.disabledTools`，同时取消该工具的暴露配置。
+重新启用后可以按需发现和调用，暴露状态保持关闭。切换禁用状态不会重连服务器。
+`mcp-foyer tools list --all` 会显示禁用记录，并标记 `disabled`。
+
 ## 添加上游服务器
 
 上游只有两种，对应配置里 `transport` 的两个取值：
