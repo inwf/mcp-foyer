@@ -9,6 +9,9 @@ plans/
 eval-local/
 backend/cmd/mcp-foyer-eval/
 
+# ===== Scratch space for intermediate results (never /tmp; see AGENTS.md) =====
+scratch/
+
 # ===== Claude Code local state =====
 .claude/
 MEMORY.md

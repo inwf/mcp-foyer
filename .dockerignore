@@ -38,6 +38,9 @@ plans/
 eval-local/
 backend/cmd/mcp-foyer-eval/
 
+# Intermediate results from development work.
+scratch/
+
 # Version control and editor leftovers.
 .git/
 .gitignore
