@@ -1,200 +1,276 @@
-# mcp-foyer
+<div align="center">
+  <img src="frontend/public/favicon.svg" alt="MCP Foyer logo" width="80" height="80" />
+  <h1>MCP Foyer</h1>
+  <p><strong>One MCP endpoint. Tools, on demand.</strong></p>
+  <p>Connect your MCP servers once. Let models discover the tools they need.<br />Manage everything from a web console and CLI, packaged in a single binary.</p>
+  <p>
+    <a href="#quick-start"><strong>Quick start</strong></a> ·
+    <a href="#how-it-works">How it works</a> ·
+    <a href="#the-web-console">Screenshots</a> ·
+    <a href="#documentation">Documentation</a> ·
+    <a href="README.zh-CN.md">简体中文</a>
+  </p>
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-3b7c57?style=flat-square" alt="MIT License" /></a>
+    <a href="backend/go.mod"><img src="https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.25 or newer" /></a>
+    <a href="frontend/package.json"><img src="https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white" alt="React 19" /></a>
+    <a href="docker-compose.example.yml"><img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose" /></a>
+  </p>
+</div>
 
-把若干个 MCP 服务器合并成**一个**端点。
+<br />
 
-它和常说的 MCP gateway 做的是同一类事，但它是给个人在本机用的单个二进制，没有
-鉴权与策略层。重点是让不会自己做渐进式披露的简单客户端，也能按需搜索和调用工具。
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/tools-dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/tools-light.png" />
+  <img src="docs/assets/tools-light.png" alt="MCP Foyer tool directory: four system tools, grouped upstream tools, usage counts, exposure switches and disable controls" width="1440" />
+</picture>
 
-客户端只配置一次，之后增删上游、改配置、看日志都在 mcp-foyer 这边完成，不用再碰
-客户端。
+<p align="center"><sub>Browse tools, choose what clients see, and control what can run. Light and dark themes included.</sub></p>
 
-```
-Claude Code ─┐                        ┌─ stdio 子进程（filesystem、git…）
-其他客户端  ─┼─→  mcp-foyer  /mcp  ───┼─ stdio 子进程
-             ┘                        └─ streamable HTTP 服务（远端）
-```
+## Built for a growing toolbox
 
-## 它解决什么
+Every new MCP server brings more configuration, more tool schemas, and another place to check when something goes wrong. MCP Foyer brings them together behind **one Streamable HTTP endpoint**.
 
-一个 MCP 客户端接十几个服务器时，会遇到三件麻烦事：
+It is built for personal, local use — especially with clients that do not provide their own progressive tool discovery. By default, clients receive **four system tools**. The model searches for upstream tools and retrieves their schemas when needed, keeping the initial tool list small as your collection grows.
 
-- **每个客户端都要配一遍。** 换一台机器、换一个客户端，就要重来。
-- **上下文被工具塞满。** 几百个工具的完整 schema 一次性进上下文，代价不小。
-- **出了问题看不见。** 某台服务器起不来时，客户端通常只是"那个工具不见了"。
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🔌 Connect once</h3>
+      Point each client at one address. Add or change upstream servers in MCP Foyer without editing every client's configuration.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🔎 Discover on demand</h3>
+      Search by tool, description, server, or argument. Fetch matching schemas in the same request when preparing a call.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🎛️ Control each tool</h3>
+      Expose frequently used tools directly. Disable individual tools to remove them from discovery and block calls.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🖥️ See what's happening</h3>
+      Inspect server status, tool usage, resources, and live logs. Browse tools as cards or a compact list.
+    </td>
+    <td valign="top">
+      <h3>🔗 Mix local and remote</h3>
+      Run stdio servers as child processes and connect to remote Streamable HTTP servers through the same endpoint.
+    </td>
+    <td valign="top">
+      <h3>📦 Deploy one binary</h3>
+      The web interface is embedded at build time. Configuration, logs, and usage records stay in the data directory.
+    </td>
+  </tr>
+</table>
 
-mcp-foyer 对应的做法是：客户端只配一个地址；提供 `search_tools` / `get_tool_details` /
-`call_tool` 这类系统工具，让模型按需发现工具，也能在一次搜索中取得调用所需的 schema；并给出一个 Web 界面
-和一套 CLI，能看到每台服务器的状态、日志和它报的错。
+## Quick start
 
-## 快速开始
+### 1. Start MCP Foyer
 
-### Docker（不需要装 Go 和 Node）
+With **Docker Compose**, Go and Node.js are not required on the host. The image is built locally from the repository and includes Node.js and npm for `npx`-based upstream servers.
 
-```
+```bash
+git clone https://github.com/inwf/mcp-foyer.git
+cd mcp-foyer
 cp docker-compose.example.yml docker-compose.yml
-docker compose up -d
+docker compose up -d --build
 ```
 
-打开 <http://127.0.0.1:7788/> 是 Web 界面，把客户端指向
-<http://127.0.0.1:7788/mcp>。停止用 `docker compose down`——配置和日志在一个命名
-卷里，不会跟着消失。
+| Open | Address |
+| --- | --- |
+| Web console | <http://127.0.0.1:7788/> |
+| MCP endpoint | <http://127.0.0.1:7788/mcp> |
 
-`cp` 出来的文件不进版本库：发布端口取决于机器上还跑着什么，跟着仓库走只会让
-改过的人多一份没人想要的改动。
+<details>
+<summary><strong>Prefer a native binary? Build from source</strong></summary>
 
-镜像里带了 Node 与 npm，所以 `npx` 那一类 stdio 上游可以直接配，不用再套一层
-自己的镜像。详见 [Docker 一节](#docker)。
+Requires **Go 1.25+**, **Node.js 22.12+**, **pnpm**, and **make**. Run from the repository root:
 
-### 从源码构建
-
-需要 Go 1.25+ 和 Node 22+（含 pnpm）。
-
-```
-make build          # 构建前端，嵌入后端，产出单个二进制
+```bash
+make build
 ./backend/bin/mcp-foyer serve
 ```
 
-同样是 <http://127.0.0.1:7788/> 和 <http://127.0.0.1:7788/mcp>。
+`make build` installs frontend dependencies, builds the web interface, and embeds it in `backend/bin/mcp-foyer`. Both addresses above are the same for a native deployment.
 
-以 Claude Code 为例：
+For subsequent commands, use `./backend/bin/mcp-foyer`, or put the binary on your `PATH` to invoke it as `mcp-foyer`.
 
+Upstream servers need their own runtimes. For example, an `npx`-based stdio server needs Node.js and npm on the machine running MCP Foyer.
+
+</details>
+
+### 2. Add your upstream servers
+
+Open the web console, go to **Servers** (服务器), and add a server or import existing configuration. Choose **stdio** for a local command or **streamable-http** for a remote MCP URL.
+
+For a filesystem server inside Docker, you can also use the CLI:
+
+```bash
+docker compose exec mcp-foyer mkdir -p /data/shared
+docker compose exec mcp-foyer mcp-foyer servers add files -- \
+  npx -y @modelcontextprotocol/server-filesystem /data/shared
 ```
+
+This server can access `/data/shared` inside the container. To use a host directory, add a bind mount to your `docker-compose.yml` and configure the server with its container-side path.
+
+<details>
+<summary><strong>Add the filesystem server to a native deployment</strong></summary>
+
+With MCP Foyer already running, execute these commands from the repository root in another terminal:
+
+```bash
+mkdir -p data/shared
+./backend/bin/mcp-foyer servers add files -- \
+  npx -y @modelcontextprotocol/server-filesystem "$(pwd)/data/shared"
+./backend/bin/mcp-foyer servers list
+```
+
+</details>
+
+### 3. Connect your MCP client
+
+Use **Streamable HTTP** and the endpoint `http://127.0.0.1:7788/mcp`.
+
+For Claude Code:
+
+```bash
 claude mcp add --transport http mcp-foyer http://127.0.0.1:7788/mcp
 ```
 
-加一台上游服务器：
+Then ask your model to find a tool for a task, such as listing files in the directory you configured. You can leave every upstream tool unexposed: discovery and calls still work through the four system tools.
 
-```
-mcp-foyer servers add files -- npx -y @modelcontextprotocol/server-filesystem /tmp
-mcp-foyer servers list
-```
+> [!IMPORTANT]
+> MCP Foyer has no built-in authentication. Keep the management interface and MCP endpoint on loopback or behind access controls you trust. The management API can configure commands to run on the host or inside the container.
 
-完整用法：`mcp-foyer guide`。配置字段：[docs/configuration.md](docs/configuration.md)。
-mcp-foyer 对模型说了什么：[docs/mcp-surface.md](docs/mcp-surface.md)。
+## How it works
 
-## 有什么
+A client's initial `tools/list` contains these four system tools:
 
-- **一个 MCP 端点**聚合全部上游。工具以 `服务器名_工具名` 暴露，两台服务器各有
-  一个 `read` 也不会撞名。
-- **两种上游传输**：`stdio`（由 mcp-foyer 拉起子进程）与 `streamable-http`（连接
-  已在运行的服务）。
-- **四个系统工具**，让模型按需检索工具而不是全量加载。
-- **Web 界面**：服务器状态、工具与资源浏览、实时日志、配置编辑。
-- **CLI**：`servers` / `tools` / `ui` / `config validate` / `guide`。
-- **单个二进制**。前端在构建时嵌入，部署时不需要另外准备静态文件。
-- **所有产生的文件都在数据目录内**（默认 `./data`），不往主目录里散落东西。
+| Tool | Purpose |
+| --- | --- |
+| `list_servers` | Get server names, descriptions, connection states, and tool/resource counts. |
+| `search_tools` | Find tools across servers, or browse one server. Supports pagination and optional schemas. |
+| `get_tool_details` | Retrieve a tool's full input schema, description, and annotations. |
+| `call_tool` | Call an upstream tool by its server and original name. |
 
-## 构建与开发
+A typical request needs just a search and a call:
 
-```
-make help           # 列出全部目标
-make build          # 前端 → 嵌入 → 单个二进制
-make check          # 两侧的全部检查
-make dev            # 打印开发时怎么把两半跑起来
-make clean          # 清理构建产物
-```
+1. **Find a tool.** Use `search_tools` with `includeSchema: true` to retrieve relevant tools and their argument schemas together.
+2. **Call it.** Pass the selected `server`, `tool`, and `args` to `call_tool`.
 
-开发时前后端分开跑：
+Already know the tool and its arguments? Call it directly through `call_tool`. Exposed tools are also available under names such as `files_read_text_file`, with naming collisions handled automatically.
 
-```
-cd backend  && go run ./cmd/mcp-foyer serve
-cd frontend && pnpm dev
-```
+### Exposure and disabling
 
-开发服务器会把 `/api`、`/ws`、`/mcp` 代理到后端，并**保留页面自身的来源**——
-这样后端的 WebSocket 来源检查是被真正走了一遍，而不是被绕过去。
+| Tool state | In the initial tool list | Discoverable | Callable |
+| --- | :---: | :---: | :---: |
+| **Enabled, unexposed** — default | — | Yes | Yes, through `call_tool` |
+| **Enabled, exposed** | Yes | Yes | Yes, directly or through `call_tool` |
+| **Disabled** | — | — | No, including Web and CLI calls |
 
-工具发现的基准、实测数据和跨语言 SDK 复测命令见 [性能与兼容性验证](docs/performance.md)。
+Disabling an exposed tool removes its exposure in the same save. Re-enabling makes it available for discovery again and leaves it unexposed. Neither operation reconnects the server. The four system tools remain available.
 
-`make check` 包含：
+## The web console
 
-| 一侧 | 内容                                             |
-| ---- | ------------------------------------------------ |
-| Go   | `gofmt` 检查、`go vet`、`go test -race ./...`      |
-| Web  | TypeScript 类型检查、oxlint、Vitest               |
+Manage connections, inspect what each server offers, and reach the tools and logs for that server from one place.
 
-**Web 界面是构建期的选择，不是运行期的。** 后端用 `webui` 构建标签决定是否嵌入
-前端；不带这个标签构建出来的二进制照常提供 API 与 MCP 端点，只是没有界面。
-`make build` 会带上它。
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/servers-dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/servers-light.png" />
+  <img src="docs/assets/servers-light.png" alt="MCP Foyer server management showing connection states, stdio and Streamable HTTP transports, tool counts and connection controls" width="1440" />
+</picture>
 
-## Docker
+<p align="center"><sub>Screenshots from a running test installation. The web interface currently uses Simplified Chinese.</sub></p>
 
-```
-cp docker-compose.example.yml docker-compose.yml   # 第一次，只需一次
-docker compose up -d          # 起来（第一次会构建镜像）
-docker compose logs -f        # 看日志
-docker compose down           # 停掉，数据卷保留
-docker compose down -v        # 停掉，并且删掉配置与日志
+- **Servers:** add, edit, import, connect, and disconnect upstreams.
+- **Tools:** search, inspect schemas, try calls, manage exposure, and disable tools individually.
+- **Usage:** see model search and call counts, failures, and recent activity; sort tools by usage.
+- **Resources and logs:** browse upstream resources and inspect live logs with filters.
+- **Configuration:** edit settings through the UI or the YAML configuration file.
+
+## Deployment notes
+
+<details>
+<summary><strong>Docker storage, networking, and everyday commands</strong></summary>
+
+```bash
+docker compose logs -f       # Follow logs
+docker compose restart       # Restart the instance
+docker compose down          # Stop; keep the data volume
+docker compose up -d --build # Rebuild and start after updating the source
 ```
 
-**仓库里只有 `docker-compose.example.yml`，`docker-compose.yml` 在 `.gitignore`
-里。** 需要改的发布端口因机器而异，跟着仓库走的话，谁改了都会得到一个脏的工作区
-和一份别人不想要的改动。`docker-compose.override.yml` 也一并忽略了，习惯用 compose
-的覆盖机制的话可以直接用。
+- The named volume `mcp-foyer-data` stores configuration, logs, and usage data under `/data`. Removing the volume also removes those files.
+- `docker-compose.yml` is your local copy and is ignored by Git. Change its host port or add bind mounts there; `docker-compose.override.yml` is also ignored.
+- The example publishes only `127.0.0.1:7788`. Publishing on all interfaces makes both the web console and MCP endpoint reachable beyond the host.
+- On the first container start, the entrypoint initializes the configuration with an empty `security.allowedNetworks` list. Incoming container traffic is accepted; the host port binding controls exposure. Existing configuration is preserved on later starts.
+- Restart after changing listener settings or session-mode rules.
 
-镜像是三段构建，跟 `make build` 同一个顺序：Node 构建前端 → 拷进嵌入目录 →
-带 `webui` 标签构建二进制。跑起来的那一层不带任何工具链。
+</details>
 
-**镜像里装了 Node 与 npm。** 最常见的 stdio 上游是 `npx` 包，一个起不动这些
-服务器的 mcp-foyer 得再套一层自己的镜像才能用——所以这是刻意把镜像做大的唯一一处
-（约 154 MB）。加服务器和平时一样：
+<details>
+<summary><strong>Native data directory and headless builds</strong></summary>
 
-```
-docker compose exec mcp-foyer mcp-foyer servers add files -- \
-  npx -y @modelcontextprotocol/server-filesystem /tmp
-```
+The default data directory is `./data`, relative to the process's working directory. Choose another location with `--data-dir` or `MCP_FOYER_DATA_DIR`.
 
-### 两件需要知道的事
-
-**谁能访问，由发布端口这一道决定。** 默认只发布到宿主机回环
-（`127.0.0.1:7788:7788`），也就是只有这台机器上能连。管理 API 能改变哪些命令会被
-作为子进程执行，所以这道边界值得明确设。内网部署、能连到即可信的场景，改成
-`"7788:7788"` 即对整个内网开放。
-
-**容器里不再用 IP 白名单挡。** mcp-foyer 自带的 `security.allowedNetworks` 默认只放行
-回环，而发布进容器的请求源地址是容器网关（不是回环），用默认会把所有人挡在外面、
-连 Web 界面都是 403。所以入口脚本在**第一次启动**时写一份 `config.yaml`，把这个
-白名单设成空列表——mcp-foyer 读作「放行所有来源」。对容器来说，访问边界是上面那个
-发布端口，不是这个列表。此后该文件不再被脚本改动；若需按来源收紧，把
-空列表换成 CIDR 段（比如 `[10.0.0.0/8]`）即可。
-
-**改监听地址与会话规则要重启才生效。** 容器里也一样，`docker compose restart`。
-
-## 目录结构
-
-```
-backend/
-  cmd/mcp-foyer/        CLI：命令树、serve、各子命令、内嵌使用指南
-  internal/
-    config/          配置的类型、解析、校验、读写
-    logging/         日志、轮转、供界面查询的内存缓冲
-    upstream/        上游连接：拨号、状态、重连
-    gateway/         聚合的 MCP server、系统工具、会话模式
-    api/             管理 API、WebSocket 事件流、静态资源
-    events/          事件总线
-    webui/           嵌入前端产物（受构建标签控制）
-    testmcp/         测试用的真实 MCP 服务器，两种传输共用
-    integration/     跨包的端到端测试
-frontend/
-  src/
-    api/             HTTP 客户端、事件流、类型
-    pages/           各页面
-    components/      共用组件
-    layout/          外壳与导航
-    hooks/ stores/   事件流订阅与客户端状态
-    theme/ styles/   设计令牌与主题
-    i18n/ lib/       文案与工具函数
-    test/            测试夹具
-docs/
-  configuration.md   配置字段参考
-  mcp-surface.md     对 MCP 客户端的自述
+```bash
+./backend/bin/mcp-foyer serve --data-dir ./data
 ```
 
-## 技术选型
+`make build` includes the web UI. Building without the `webui` tag produces a headless binary that still serves the management API and MCP endpoint:
 
-**后端** Go 1.25 · [官方 MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk)
-· gin · gorilla/websocket · goccy/go-yaml · cobra · 标准库 `log/slog`
+```bash
+cd backend
+go build -o bin/mcp-foyer ./cmd/mcp-foyer
+```
 
-**前端** React 19 · TypeScript 6（`strict` 及五个附加严格标志全部显式开启）·
-Vite 8 · antd 6 · TanStack Query 5 · Zustand 5 · React Router 7 · Vitest + msw ·
-oxlint
+</details>
+
+## Documentation
+
+| Looking for | Start here |
+| --- | --- |
+| 中文介绍与快速开始 | [简体中文 README](README.zh-CN.md) |
+| Full CLI usage | `mcp-foyer guide` · [Usage guide](backend/internal/guide/guide.md) |
+| Configuration fields and defaults | [Configuration reference](docs/configuration.md) |
+| Discovery, search, and MCP behavior | [MCP surface](docs/mcp-surface.md) |
+| Search benchmarks and SDK interoperability | [Performance and compatibility](docs/performance.md) |
+
+The detailed guides linked above are currently in Chinese.
+
+## Development
+
+```bash
+make help   # Available targets
+make build  # Build the web UI and single binary
+make check  # Go formatting, vet, race tests; TypeScript, oxlint, Vitest
+make dev    # Print the separate backend/frontend development commands
+```
+
+For development, run these in two terminals:
+
+```bash
+# Terminal 1
+cd backend && go run ./cmd/mcp-foyer serve
+```
+
+```bash
+# Terminal 2; install dependencies first if needed
+cd frontend && pnpm install --frozen-lockfile && pnpm dev
+```
+
+Vite proxies `/api`, `/ws`, and `/mcp` to the backend while preserving the browser's origin for WebSocket checks. Run `make check` before submitting changes.
+
+| Area | Technologies |
+| --- | --- |
+| Backend | Go · official MCP Go SDK · Gin · Cobra · `log/slog` |
+| Frontend | React 19 · TypeScript · Vite · Ant Design · TanStack Query · Zustand |
+| Distribution | Embedded web assets · single binary · Docker Compose |
+
+## License
+
+[MIT](LICENSE) © 2026 inwf.
+
+<p align="center"><sub>If MCP Foyer makes your MCP setup easier to manage, a <a href="https://github.com/inwf/mcp-foyer">GitHub star</a> helps others find it.</sub></p>
