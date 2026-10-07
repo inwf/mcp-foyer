@@ -5,6 +5,7 @@ import type {
   Config,
   ConfigResponse,
   ConfigWriteResponse,
+  EmbeddingStatus,
   EmbeddingTestResult,
   GatewayStatus,
   GatewayTools,
@@ -51,6 +52,9 @@ export const endpoints = {
    *  real one. */
   testEmbedding: (embedding: { url: string; apiKey: string; model: string }) =>
     api.post<EmbeddingTestResult>(`${BASE}/embedding/test`, { embedding }),
+
+  /** How far the embedding index has got. Only the settings page asks. */
+  embeddingStatus: () => api.get<EmbeddingStatus>(`${BASE}/embedding/status`),
 
   // ===== servers =====
 

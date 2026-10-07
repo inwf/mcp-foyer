@@ -215,6 +215,12 @@ func ValidateEmbedding(e Embedding) error {
 func validateEmbedding(v *validator, e Embedding) {
 	v.positiveDuration("embedding.timeout", e.Timeout)
 
+	// A similarity is a cosine: it lives between -1 and 1, and a floor
+	// outside 0..1 either passes everything or nothing.
+	if e.MinSimilarity < 0 || e.MinSimilarity > 1 {
+		v.add("embedding.minSimilarity", "is %v, want a value between 0 and 1", e.MinSimilarity)
+	}
+
 	// An address is checked whenever there is one. It was typed for
 	// this purpose, so a mistake in it is reported while it is being
 	// made rather than at the moment the feature gets switched on.

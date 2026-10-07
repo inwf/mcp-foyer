@@ -58,6 +58,11 @@ func (p Paths) LogFile() string { return filepath.Join(p.LogDir(), "mcp-foyer.lo
 // UsageFile holds the tool usage counts.
 func (p Paths) UsageFile() string { return filepath.Join(p.root, "usage.json") }
 
+// EmbeddingIndexFile holds the semantic search index: a readable header
+// followed by the vectors. It is written by the embedding package, which
+// documents the layout.
+func (p Paths) EmbeddingIndexFile() string { return filepath.Join(p.root, "embeddings.bin") }
+
 // Ensure creates the directories mcp-foyer writes into.
 func (p Paths) Ensure() error {
 	for _, dir := range []string{p.root, p.LogDir()} {
@@ -72,10 +77,11 @@ func (p Paths) Ensure() error {
 // the resolved layout and lets tests assert that nothing escapes Root.
 func (p Paths) All() map[string]string {
 	return map[string]string{
-		"root":   p.Root(),
-		"config": p.ConfigFile(),
-		"logs":   p.LogDir(),
-		"log":    p.LogFile(),
-		"usage":  p.UsageFile(),
+		"root":       p.Root(),
+		"config":     p.ConfigFile(),
+		"logs":       p.LogDir(),
+		"log":        p.LogFile(),
+		"usage":      p.UsageFile(),
+		"embeddings": p.EmbeddingIndexFile(),
 	}
 }

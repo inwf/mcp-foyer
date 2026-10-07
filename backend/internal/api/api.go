@@ -78,6 +78,10 @@ type Options struct {
 	// nothing, which is what a test of the routing layer alone wants.
 	Bus *events.Bus
 
+	// Semantic reports the state of the embedding index. A nil one leaves
+	// the status endpoint reporting only what the configuration says.
+	Semantic StatusSource
+
 	// WebUI holds the built frontend. A nil file system, or one with no
 	// entry document, leaves paths outside the API reporting that no web
 	// interface is available — which is what a backend-only build and a
@@ -238,6 +242,9 @@ func (a *API) registerRoutes(api gin.IRoutes) {
 	// The embedding section, probed with the values a form holds — saved
 	// or not.
 	api.POST("/embedding/test", a.handleTestEmbedding)
+
+	// How far the embedding index has got.
+	api.GET("/embedding/status", a.handleEmbeddingStatus)
 
 	// Servers, and what each one offers.
 	api.GET("/servers", a.handleListServers)

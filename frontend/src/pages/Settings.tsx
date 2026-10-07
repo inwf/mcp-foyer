@@ -264,6 +264,41 @@ function EmbeddingProbe() {
   );
 }
 
+/** How far the index has got.
+ *
+ *  Polling rather than the event stream: this is progress, and a page
+ *  watching a build wants the count to move — which the stream would
+ *  have to describe with a new event kind of its own. */
+function EmbeddingIndexStatus() {
+  const { t } = useTranslation();
+  const status = useQuery({
+    queryKey: keys.embedding.status(),
+    queryFn: endpoints.embeddingStatus,
+    // Faster while a build is running: that is when the numbers move and
+    // when someone is watching them.
+    refetchInterval: (query) => (query.state.data?.building ? 2000 : 15000),
+  });
+
+  const data = status.data;
+  if (!data?.enabled) return null;
+
+  return (
+    <div className={cx(styles.wide, styles.indexStatus)}>
+      <span className={styles.indexCount}>
+        {t('settings.embeddingIndexed', { indexed: data.indexed, total: data.total })}
+      </span>
+      {data.building ? (
+        <span className={styles.indexBuilding}>{t('settings.embeddingIndexBuilding')}</span>
+      ) : null}
+      {data.lastError ? (
+        <span className={styles.probeFail}>
+          {t('settings.embeddingIndexFailed', { error: data.lastError })}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function SettingsForm({
   config,
   onSave,
@@ -464,6 +499,7 @@ function SettingsForm({
               <Input className="mono" autoComplete="off" />
             </Form.Item>
             <EmbeddingProbe />
+            <EmbeddingIndexStatus />
           </div>
         </SettingsSection>
 

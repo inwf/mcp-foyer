@@ -37,6 +37,11 @@ type Options struct {
 	// nothing.
 	Usage Usage
 
+	// Semantics, when set, adds a ranking by meaning alongside the words a
+	// tool contains. Nil — the zero value, and what every deployment
+	// without an embedding service has — leaves search lexical.
+	Semantics Semantics
+
 	// After overrides the timer used to coalesce notifications, for
 	// tests that cannot wait for it.
 	After func(time.Duration, func())
@@ -137,7 +142,7 @@ func New(opts Options) *Gateway {
 			HasResources: true,
 		})
 
-	RegisterSystemTools(g.server, opts.Upstreams, opts.Configs, g.SystemTools, g.opts.Usage)
+	RegisterSystemTools(g.server, opts.Upstreams, opts.Configs, opts.Semantics, g.SystemTools, g.opts.Usage)
 
 	// Installed before anything can connect: a session that arrives before
 	// the middleware is in place would never be marked, and so would never

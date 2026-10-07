@@ -243,6 +243,18 @@ type Embedding struct {
 	// longer than a single query, so this is the per-request cap rather
 	// than a budget for a whole index build.
 	Timeout time.Duration `yaml:"timeout"`
+
+	// MinSimilarity is how close a tool has to be to the query before the
+	// semantic side says anything about it, on a scale from 0 to 1. It is
+	// the knob that keeps the feature from inventing hits: below it, a
+	// tool is not ranked by meaning at all, so a query about something
+	// the directory does not have can still come back empty.
+	//
+	// There is no universal value. Cosine similarities are a property of
+	// the model, and the same pair of texts scores differently under two
+	// of them; the default is a middle guess to be tuned against the
+	// directory actually in use.
+	MinSimilarity float64 `yaml:"minSimilarity"`
 }
 
 // MCPServer is one upstream MCP server. Which fields apply depends on

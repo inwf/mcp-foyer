@@ -136,6 +136,12 @@ func TestValidateTopLevelRules(t *testing.T) {
 			c.Embedding.Enabled = true
 			c.Embedding.URL = "https://api.example.com/v1"
 		}, "embedding.model"},
+		{"similarity floor above one", func(c *config.Config) {
+			c.Embedding.MinSimilarity = 1.5
+		}, "embedding.minSimilarity"},
+		{"similarity floor below zero", func(c *config.Config) {
+			c.Embedding.MinSimilarity = -0.1
+		}, "embedding.minSimilarity"},
 	}
 
 	for _, tt := range tests {
@@ -199,6 +205,12 @@ func TestValidateAcceptsMeaningfulEdgeValues(t *testing.T) {
 			c.Embedding.Enabled = true
 			c.Embedding.URL = "https://api.example.com/v1"
 			c.Embedding.Model = "bge-m3"
+		}},
+		// Zero means no floor: every tool with a positive similarity
+		// counts, which is a legitimate choice for a model whose
+		// similarities all sit high.
+		{"a zero similarity floor means no floor", func(c *config.Config) {
+			c.Embedding.MinSimilarity = 0
 		}},
 	}
 

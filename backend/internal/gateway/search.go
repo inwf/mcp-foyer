@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"cmp"
+	"context"
 	"math"
 	"slices"
 	"strings"
@@ -114,6 +116,23 @@ func SearchTools(query string, candidates []Searchable, limit int) []SearchHit {
 	return hits
 }
 
+// RankTools ranks candidates the way search_tools does: by the words they
+// contain, with the semantic ranking fused in when sem has something to
+// say. It is what the settings page's preview shows beside the lexical
+// order, and what the system tool itself calls, so the two cannot
+// disagree about what a caller would get.
+func RankTools(ctx context.Context, query string, candidates []Searchable, limit int, sem Semantics) ([]SearchHit, []string) {
+	// Only a query with words has anything to embed, and browsing keeps
+	// the lexical order whatever the service has to say. The semantic side
+	// never fails the search: a service that is down comes back as no
+	// signal at all, and the ranking is the one it always was.
+	var similarities []float32
+	if query != "" && sem != nil {
+		similarities = sem.Similarities(ctx, query, candidates)
+	}
+	return searchCandidatesWith(query, candidates, limit, similarities)
+}
+
 // UnmatchedTerms returns the query words that appear in no candidate at
 // all, spelled as the caller wrote them. A query of nothing but common
 // words returns nothing and reports those words here, so that an empty
@@ -128,9 +147,43 @@ func UnmatchedTerms(query string, candidates []Searchable) []string {
 	return unmatched
 }
 
+// Semantics ranks candidates by meaning, alongside the words they
+// contain. It is optional: nil means this deployment has no embedding
+// service, and search is exactly the lexical search it always was.
+type Semantics interface {
+	// Similarities reports how close each candidate is to the query, one
+	// value per candidate in order, zero meaning nothing to say about it —
+	// it is below the configured floor, has no vector yet, or the service
+	// did not answer. A nil result says it about every candidate at once.
+	//
+	// It may take as long as a call to the embedding service; the caller's
+	// context bounds that. Not answering is not an error the caller has to
+	// handle: search has to work without it, so a failure arrives as no
+	// answer.
+	Similarities(ctx context.Context, query string, candidates []Searchable) []float32
+}
+
 // searchCandidates answers both questions from one index, for the caller
 // that asks both.
 func searchCandidates(query string, candidates []Searchable, limit int) ([]SearchHit, []string) {
+	return searchCandidatesWith(query, candidates, limit, nil)
+}
+
+// searchCandidatesWith is [searchCandidates] plus a semantic signal:
+// similarities[i] is how close candidate i is to the query, zero meaning
+// nothing to say about it, and nil meaning nothing to say about any of
+// them — which is what a deployment with no embedding service passes, and
+// what leaves the ranking exactly as it was.
+//
+// With a signal the two orders are fused by rank: a tool the words missed
+// but the meaning found is shown beside the tools the words found, and a
+// tool both agreed on comes first.
+func searchCandidatesWith(query string, candidates []Searchable, limit int, similarities []float32) ([]SearchHit, []string) {
+	hasSemantics := len(similarities) == len(candidates)
+	if !hasSemantics {
+		similarities = make([]float32, len(candidates))
+	}
+
 	words := strings.Fields(query)
 	idx := indexCandidates(candidates)
 
@@ -141,13 +194,33 @@ func searchCandidates(query string, candidates []Searchable, limit int) ([]Searc
 	scores := idx.scores(queryTerms(distinctive))
 	matched := idx.wordsMatched(distinctive)
 
+	// The reported lexical scores, which both the plain order and the
+	// fused one's lexical half are built on — so a fusion that changes
+	// nothing changes nothing, down to the ties.
+	reported := make([]int, len(candidates))
+	for i := range scores {
+		reported[i] = reportedScore(scores[i])
+	}
+
+	// A blank query is browsing: there is nothing to embed, and the plain
+	// order is the one paging through a directory uses.
+	var fused []float64
+	if len(words) > 0 && hasSemantics {
+		fused = reciprocalRankFusion(reported, similarities, candidates)
+	}
+
 	hits := make([]SearchHit, 0, len(candidates))
 	for i, candidate := range candidates {
 		// A query with no words asks for everything; one with words asks
-		// for the tools that answered at least one of them. A query of
-		// nothing but common words asks for nothing, and gets it.
-		if len(words) > 0 && matched[i] == 0 {
+		// for the tools that answered at least one of them, or that the
+		// semantic side could speak for. A query of nothing but common
+		// words asks for nothing, and gets it.
+		if len(words) > 0 && matched[i] == 0 && similarities[i] <= 0 {
 			continue
+		}
+		score := reported[i]
+		if fused != nil {
+			score = reportedFusion(fused[i])
 		}
 		hits = append(hits, SearchHit{
 			Server:      candidate.Server,
@@ -155,7 +228,7 @@ func searchCandidates(query string, candidates []Searchable, limit int) ([]Searc
 			Exposed:     candidate.Exposed,
 			Description: candidate.Description,
 			Matched:     matched[i],
-			Score:       reportedScore(scores[i]),
+			Score:       score,
 		})
 	}
 
@@ -163,10 +236,7 @@ func searchCandidates(query string, candidates []Searchable, limit int) ([]Searc
 		if a.Score != b.Score {
 			return b.Score - a.Score
 		}
-		if origin := strings.Compare(a.Server, b.Server); origin != 0 {
-			return origin
-		}
-		return strings.Compare(a.Tool, b.Tool)
+		return compareOrigins(a.Server, a.Tool, b.Server, b.Tool)
 	})
 	if limit > 0 && len(hits) > limit {
 		hits = hits[:limit]
@@ -188,6 +258,82 @@ func searchCandidates(query string, candidates []Searchable, limit int) ([]Searc
 		unmatched = append(unmatched, words...)
 	}
 	return hits, unmatched
+}
+
+// rrfK is the constant of reciprocal rank fusion: ranks are discounted by
+// it so that the top of one list is never worth more than a good showing
+// in the other. 60 is the value the method was published with.
+const rrfK = 60
+
+// reciprocalRankFusion combines a lexical order and a semantic order into
+// one score per candidate: each order contributes 1/(rrfK+rank), and a
+// candidate missing from an order — below the similarity floor, or
+// without a vector yet — simply gets nothing from it.
+//
+// Ranks rather than scores, because a BM25 score and a cosine have no
+// common scale: one is relative to the other candidates, the other to the
+// model that produced it, and adding them would mean inventing a
+// calibration neither has.
+func reciprocalRankFusion(reported []int, similarities []float32, candidates []Searchable) []float64 {
+	fused := make([]float64, len(candidates))
+
+	// A candidate that matched no word is not at the bottom of the
+	// lexical order; it is not in it.
+	lexical := make([]int, 0, len(candidates))
+	for i, score := range reported {
+		if score > 0 {
+			lexical = append(lexical, i)
+		}
+	}
+	slices.SortFunc(lexical, func(a, b int) int {
+		if reported[a] != reported[b] {
+			return cmp.Compare(reported[b], reported[a])
+		}
+		return compareOrigins(candidates[a].Server, candidates[a].Tool,
+			candidates[b].Server, candidates[b].Tool)
+	})
+	for rank, at := range lexical {
+		fused[at] += 1 / (rrfK + float64(rank))
+	}
+
+	semantic := make([]int, 0, len(candidates))
+	for i, similarity := range similarities {
+		if similarity > 0 {
+			semantic = append(semantic, i)
+		}
+	}
+	slices.SortFunc(semantic, func(a, b int) int {
+		if similarities[a] != similarities[b] {
+			return cmp.Compare(similarities[b], similarities[a])
+		}
+		return compareOrigins(candidates[a].Server, candidates[a].Tool,
+			candidates[b].Server, candidates[b].Tool)
+	})
+	for rank, at := range semantic {
+		fused[at] += 1 / (rrfK + float64(rank))
+	}
+
+	return fused
+}
+
+// reportedFusion turns a fused score into the integer clients see, the
+// way [reportedScore] does for a lexical one. A fused score is far
+// smaller — a top rank is 1/60 — so it is scaled to keep the digits a
+// caller reads apart.
+func reportedFusion(score float64) int {
+	if score <= 0 {
+		return 0
+	}
+	return max(1, int(math.Round(score*1_000_000)))
+}
+
+// compareOrigins orders two tools by where they come from, which is what
+// breaks a tie: the exposed name is empty for most tools, so it cannot.
+func compareOrigins(aServer, aTool, bServer, bTool string) int {
+	if origin := strings.Compare(aServer, bServer); origin != 0 {
+		return origin
+	}
+	return strings.Compare(aTool, bTool)
 }
 
 // lowerTerms are the query's words, lowered, for the search cursor to

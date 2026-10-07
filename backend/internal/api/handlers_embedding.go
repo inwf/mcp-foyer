@@ -9,6 +9,7 @@ import (
 
 	"mcp-foyer/internal/config"
 	"mcp-foyer/internal/embedding"
+	"mcp-foyer/internal/semantic"
 )
 
 // probeText is what a probe embeds. It is written in both languages the
@@ -92,4 +93,23 @@ func (a *API) handleTestEmbedding(c *gin.Context) {
 		LatencyMs: latency.Milliseconds(),
 		Dimension: len(vectors[0]),
 	})
+}
+
+// StatusSource reports the state of the embedding index.
+//
+// An interface rather than the indexer itself, so that this package is
+// not tied to how the index is built. A nil one means this process has
+// none, which is what a test of the routing layer alone wants.
+type StatusSource interface {
+	Status() semantic.Status
+}
+
+// handleEmbeddingStatus reports how far the index has got, which is what
+// the settings page shows while a build is running and after one failed.
+func (a *API) handleEmbeddingStatus(c *gin.Context) {
+	if a.opts.Semantic == nil {
+		c.JSON(http.StatusOK, semantic.Status{Enabled: a.opts.Configs.Get().Embedding.Enabled})
+		return
+	}
+	c.JSON(http.StatusOK, a.opts.Semantic.Status())
 }

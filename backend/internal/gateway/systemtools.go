@@ -170,7 +170,7 @@ const (
 // either leaves that model with half the rule. The same words are used
 // throughout: a tool is either "in this tool list" or not, which is the
 // only distinction a caller needs.
-func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own OwnTools, use Usage) {
+func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, sem Semantics, own OwnTools, use Usage) {
 	if use == nil {
 		use = noUsage{}
 	}
@@ -198,8 +198,8 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 			"Servers that are not connected are named in unavailable, up to five, with unavailableMore counting the rest; " +
 			"browsing one gives the reason.",
 		Annotations: readOnly("Search tools"),
-	}, func(_ context.Context, _ *mcp.CallToolRequest, in searchToolsInput) (*mcp.CallToolResult, searchToolsOutput, error) {
-		out, err := searchTools(ups, cfgs, own, in)
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in searchToolsInput) (*mcp.CallToolResult, searchToolsOutput, error) {
+		out, err := searchTools(ctx, ups, cfgs, sem, own, in)
 		if err != nil {
 			return toolError(err), searchToolsOutput{}, nil
 		}
@@ -353,7 +353,7 @@ func cachedTool(ups Upstreams, server, tool string) *mcp.Tool {
 	return nil
 }
 
-func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput) (searchToolsOutput, error) {
+func searchTools(ctx context.Context, ups Upstreams, cfgs Configs, sem Semantics, own OwnTools, in searchToolsInput) (searchToolsOutput, error) {
 	in.Query = strings.TrimSpace(in.Query)
 	in.Server = strings.TrimSpace(in.Server)
 	if in.Query == "" && in.Server == "" {
@@ -375,33 +375,24 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 	cfg := cfgs.Get()
 	// Disabled tools are not there to be found, by a query or by browsing.
 	all := UsableTools(ups.Tools(), cfg)
-	// Names are assigned over the complete exposed set before filtering;
-	// otherwise a collision on another server would give the wrong name.
-	names := PublishedNames(all, cfg)
 	if in.Server == Name {
 		if own == nil {
 			return searchToolsOutput{}, fmt.Errorf("no server named %q", Name)
 		}
 		all = map[string][]*mcp.Tool{Name: own()}
 	}
-	serverTitles := make(map[string]string)
-	for _, status := range ups.Statuses() {
-		serverTitles[status.Name] = status.ServerName
+
+	var candidates []Searchable
+	if in.Server == Name {
+		candidates = searchableOwn(all[Name])
+	} else {
+		candidates = Searchables(ups, cfgs, in.Server)
 	}
-	servers := []string{in.Server}
-	if in.Server == "" {
-		// Group ties in their final order before ranking; a broad query
-		// should not have to sort randomized map order on every request.
-		servers = slices.Sorted(maps.Keys(all))
-	}
-	capacity := 0
-	for _, server := range servers {
-		capacity += len(all[server])
-	}
-	candidates := make([]Searchable, 0, capacity)
-	byOrigin := make(map[Route]*mcp.Tool, capacity)
-	for _, server := range servers {
-		title, description := serverTitles[server], cfg.MCPServers[server].Description
+
+	// byOrigin is what includeSchema is answered from: the tool an origin
+	// points at, so its schema can ride along with the hit.
+	byOrigin := make(map[Route]*mcp.Tool)
+	for _, server := range slices.Sorted(maps.Keys(all)) {
 		for _, tool := range all[server] {
 			if tool == nil || tool.Name == "" {
 				continue
@@ -411,18 +402,9 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 				continue
 			}
 			byOrigin[origin] = tool
-			exposed, _ := names.Exposed(server, tool.Name)
-			if in.Server == Name {
-				exposed = tool.Name
-			}
-			candidates = append(candidates, Searchable{
-				Server: server, Tool: tool.Name, Exposed: exposed, Description: tool.Description,
-				ServerTitle: title, ServerDescription: description,
-				Arguments: ArgumentText(tool.InputSchema),
-			})
 		}
 	}
-	hits, unmatched := searchCandidates(in.Query, candidates, 0)
+	hits, unmatched := RankTools(ctx, in.Query, candidates, 0, sem)
 	// A cross-server page shows each server at most a couple of hits, so
 	// that one server's near-identical tools cannot fill it; browsing a
 	// server is where a caller sees everything it has. The spread runs
@@ -456,6 +438,76 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 		out.Hits = append(out.Hits, result)
 	}
 	return out, nil
+}
+
+// Searchables builds the candidates a search ranks: every usable tool of
+// one server, or of every server when none is named, each carrying the
+// text search matches it by.
+//
+// It is the list search_tools itself ranks, which is what lets the
+// settings page's preview show a caller the same results it would get —
+// and what keeps the two from drifting apart.
+func Searchables(ups Upstreams, cfgs Configs, server string) []Searchable {
+	cfg := cfgs.Get()
+	all := UsableTools(ups.Tools(), cfg)
+	// Names are assigned over the complete exposed set before filtering;
+	// otherwise a collision on another server would give the wrong name.
+	names := PublishedNames(all, cfg)
+
+	titles := make(map[string]string)
+	for _, status := range ups.Statuses() {
+		titles[status.Name] = status.ServerName
+	}
+
+	servers := []string{server}
+	if server == "" {
+		// Group ties in their final order before ranking; a broad query
+		// should not have to sort randomized map order on every request.
+		servers = slices.Sorted(maps.Keys(all))
+	}
+
+	capacity := 0
+	for _, name := range servers {
+		capacity += len(all[name])
+	}
+	candidates := make([]Searchable, 0, capacity)
+	seen := make(map[Route]bool, capacity)
+	for _, name := range servers {
+		title, description := titles[name], cfg.MCPServers[name].Description
+		for _, tool := range all[name] {
+			if tool == nil || tool.Name == "" {
+				continue
+			}
+			origin := Route{Server: name, Tool: tool.Name}
+			if seen[origin] {
+				continue
+			}
+			seen[origin] = true
+			exposed, _ := names.Exposed(name, tool.Name)
+			candidates = append(candidates, Searchable{
+				Server: name, Tool: tool.Name, Exposed: exposed, Description: tool.Description,
+				ServerTitle: title, ServerDescription: description,
+				Arguments: ArgumentText(tool.InputSchema),
+			})
+		}
+	}
+	return candidates
+}
+
+// searchableOwn is the gateway's own tools as candidates: offered under
+// their own names, since nothing about them is exposed or hidden.
+func searchableOwn(tools []*mcp.Tool) []Searchable {
+	out := make([]Searchable, 0, len(tools))
+	for _, tool := range tools {
+		if tool == nil || tool.Name == "" {
+			continue
+		}
+		out = append(out, Searchable{
+			Server: Name, Tool: tool.Name, Exposed: tool.Name, Description: tool.Description,
+			Arguments: ArgumentText(tool.InputSchema),
+		})
+	}
+	return out
 }
 
 // hitsPerServer bounds what one server contributes to a cross-server

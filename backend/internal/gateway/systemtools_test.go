@@ -85,12 +85,19 @@ func (f *fakeUpstreams) ReadResource(_ context.Context, server, uri string) (*mc
 // just the handler bodies.
 func gatewayFixture(t *testing.T, ups gateway.Upstreams, cfgs gateway.Configs) *mcp.ClientSession {
 	t.Helper()
+	return gatewayFixtureWith(t, ups, cfgs, nil)
+}
+
+// gatewayFixtureWith is [gatewayFixture] with a semantic ranking wired
+// in, for the tests that need one.
+func gatewayFixtureWith(t *testing.T, ups gateway.Upstreams, cfgs gateway.Configs, sem gateway.Semantics) *mcp.ClientSession {
+	t.Helper()
 
 	server := mcp.NewServer(&mcp.Implementation{Name: "mcp-foyer", Version: "test"}, nil)
 	// Nil own-tools: this fixture registers the tools on a bare server it
 	// does not own, so there is nothing to read them back off. Self
 	// description is a whole-gateway behaviour and is tested against one.
-	gateway.RegisterSystemTools(server, ups, cfgs, nil, nil)
+	gateway.RegisterSystemTools(server, ups, cfgs, sem, nil, nil)
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 

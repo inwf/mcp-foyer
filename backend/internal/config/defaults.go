@@ -76,6 +76,8 @@ func Default() Config {
 			// is answering, short enough that a dead one is noticed
 			// rather than waited on.
 			Timeout: 15 * time.Second,
+			// A middle guess, for the reason given on the field.
+			MinSimilarity: 0.35,
 		},
 
 		MCPServers: map[string]MCPServer{},

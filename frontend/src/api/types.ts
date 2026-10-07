@@ -108,6 +108,11 @@ export interface EmbeddingConfig {
   /** The model name. It has to read every language the directory uses. */
   model?: string;
   timeout: Duration;
+  /** How close a tool has to be to the query before the semantic side
+   *  says anything about it. Below it a tool is not ranked by meaning at
+   *  all, which is what keeps a query about something absent from
+   *  conjuring hits. Model-dependent, so there is no universal value. */
+  minSimilarity: number;
 }
 
 /** What a probe of the embedding service found. Reaching the service is
@@ -118,6 +123,20 @@ export interface EmbeddingTestResult {
   latencyMs: number;
   dimension: number;
   error?: string;
+}
+
+/** How far the embedding index has got, which the settings page polls
+ *  while a build is running. */
+export interface EmbeddingStatus {
+  enabled: boolean;
+  model?: string;
+  dimension?: number;
+  indexed: number;
+  total: number;
+  building: boolean;
+  lastError?: string;
+  /** Unix seconds of the last round that finished. */
+  lastDone?: number;
 }
 
 /** The placeholder a hidden secret is handed out as. Sending it back

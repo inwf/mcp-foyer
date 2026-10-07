@@ -19,6 +19,7 @@ import (
 	"mcp-foyer/internal/events"
 	"mcp-foyer/internal/gateway"
 	"mcp-foyer/internal/logging"
+	"mcp-foyer/internal/semantic"
 	"mcp-foyer/internal/upstream"
 	"mcp-foyer/internal/usage"
 )
@@ -182,6 +183,21 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 		}
 	}()
 
+	// The embedding index is kept in step with the directory in the
+	// background. It is inert until the embedding section is switched on,
+	// which is why it is built unconditionally: the switch can be flipped
+	// at any time, and a component that only exists when it was on at
+	// startup could not react to that. Search asks it for a ranking by
+	// meaning; with the section off it answers with nothing, and search is
+	// what it always was.
+	sem := semantic.New(semantic.Options{
+		Configs:   configs,
+		Upstreams: ups,
+		Bus:       bus,
+		Path:      paths.EmbeddingIndexFile(),
+		Logger:    log.For(logging.ModuleGateway),
+	})
+
 	g := gateway.New(gateway.Options{
 		Version:   version,
 		Upstreams: ups,
@@ -190,9 +206,11 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 		Gateway:   cfg.Gateway,
 		WireDebug: cfg.Logging.MCPWireDebug,
 		Usage:     counts,
+		Semantics: sem,
 	})
 	g.Sync()
 	g.Watch(ctx, bus)
+	sem.Start(ctx)
 
 	served, err := api.New(api.Options{
 		Version:   version,
@@ -205,6 +223,7 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 		Logs:      store,
 		Usage:     counts,
 		Bus:       bus,
+		Semantic:  sem,
 		WebUI:     opts.WebUI,
 	})
 	if err != nil {

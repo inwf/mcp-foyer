@@ -252,6 +252,7 @@ data/
   config.yaml       配置
   logs/mcp-foyer.log   日志
   usage.json        工具使用计数（模型搜到、调用了哪些工具）
+  embeddings.bin    嵌入模型的向量索引（开启后生成）
 ```
 
 改用别处：`--data-dir /path` 或环境变量 `MCP_FOYER_DATA_DIR`。

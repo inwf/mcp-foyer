@@ -55,9 +55,10 @@ const CONFIG = {
     keepAliveFailureThreshold: 3,
   },
   startup: { connectDelay: '0s', maxRetries: 3, retryBackoff: '2s' },
-  // The shape the backend sends: `enabled` and `timeout` are always
-  // there, the rest appear only once they have a value.
-  embedding: { enabled: false, timeout: '15s' },
+  // The shape the backend sends: `enabled`, `timeout` and
+  // `minSimilarity` are always there, the rest appear only once they have
+  // a value.
+  embedding: { enabled: false, timeout: '15s', minSimilarity: 0.35 },
   mcpServers: {},
 };
 
@@ -74,6 +75,11 @@ function editing(config: object = CONFIG) {
       saved.body = (await request.json()) as { config: Record<string, unknown> };
       return HttpResponse.json({ config, changes: [] });
     }),
+    // Every render of this page asks for the index status. A test that
+    // cares about the answer replaces this after calling editing().
+    http.get('/api/embedding/status', () =>
+      HttpResponse.json({ enabled: false, indexed: 0, total: 0, building: false }),
+    ),
   );
 
   renderWithProviders(<Settings />);
@@ -386,5 +392,60 @@ describe('the embedding probe', () => {
     await userEvent.click(screen.getByRole('button', { name: '测试' }));
 
     expect(await screen.findByText(/connection refused/)).toBeInTheDocument();
+  });
+});
+
+/*
+ * How far the index has got.
+ *
+ * The page polls this while a build runs. What matters here is that the
+ * count is shown when there is one, that a failure carries its reason,
+ * and that the line stays out of the way while the section is off.
+ */
+describe('the embedding index status', () => {
+  const STORED = {
+    ...CONFIG,
+    embedding: {
+      enabled: true,
+      url: 'https://api.example.com/v1',
+      model: 'bge-m3',
+      timeout: '15s',
+    },
+  };
+
+  it('shows how far the build has got', async () => {
+    editing(STORED);
+    api.use(
+      http.get('/api/embedding/status', () =>
+        HttpResponse.json({ enabled: true, indexed: 3, total: 10, building: true }),
+      ),
+    );
+
+    expect(await screen.findByText('已建索引 3/10')).toBeInTheDocument();
+    expect(screen.getByText('构建中')).toBeInTheDocument();
+  });
+
+  it('shows a failure with its reason', async () => {
+    editing(STORED);
+    api.use(
+      http.get('/api/embedding/status', () =>
+        HttpResponse.json({
+          enabled: true,
+          indexed: 0,
+          total: 10,
+          building: false,
+          lastError: 'connection refused',
+        }),
+      ),
+    );
+
+    expect(await screen.findByText(/最近一次失败：connection refused/)).toBeInTheDocument();
+  });
+
+  it('says nothing while the section is off', async () => {
+    editing();
+
+    await screen.findByDisplayValue('127.0.0.1');
+    expect(screen.queryByText(/已建索引/)).not.toBeInTheDocument();
   });
 });

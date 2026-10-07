@@ -44,6 +44,11 @@ export const keys = {
     usage: () => [...keys.gateway.all, 'usage'] as const,
   },
 
+  embedding: {
+    all: ['embedding'] as const,
+    status: () => [...keys.embedding.all, 'status'] as const,
+  },
+
   logs: {
     all: ['logs'] as const,
     query: (filter: unknown) => [...keys.logs.all, 'query', filter] as const,

@@ -159,6 +159,22 @@
   overflow-wrap: anywhere;
 }
 
+.indexStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+.indexCount {
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+.indexBuilding {
+  color: var(--warn);
+  font-size: var(--text-xs);
+}
+
 @media (max-width: 1100px) {
   .formSection {
     grid-template-columns: 160px minmax(0, 1fr);

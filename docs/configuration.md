@@ -57,6 +57,7 @@ startup:
 embedding:
   enabled: false
   timeout: 15s
+  minSimilarity: 0.35
 mcpServers: {}
 ```
 
@@ -195,6 +196,7 @@ gateway:
 | `apiKey`  | *(空)*   | 以 `Authorization: Bearer` 发送；同机的服务可以留空 |
 | `model`   | *(空)*   | 嵌入模型名。要能读目录使用的所有语言：中英混合的目录配只认英文的模型，中文查询仍然落空 |
 | `timeout` | `15s`    | 单个嵌入请求的上限                           |
+| `minSimilarity` | `0.35` | 语义排序的相似度门槛：低于它的工具完全不参与语义排序，目录里没有的东西因此仍可能得到空结果。余弦的数值取决于模型，没有通用值，默认只是折中，开启后可以对着搜索结果调 |
 
 接口按 OpenAI 的 embeddings API 设计，Ollama、OpenAI 与各类兼容网关都能接。
 打开 `enabled` 之前先在设置页填好并测试：测试会发一段样例文本，回报延迟与向量
@@ -317,12 +319,17 @@ data/
   config.yaml
   logs/mcp-foyer.log
   usage.json
+  embeddings.bin
 ```
 
 `usage.json` 是工具使用计数：模型通过 `search_tools` 搜到、通过 `call_tool` 或
 发布名调用了哪些工具，各多少次、失败几次。改动后几秒内写一次，退出时再写一次；
 文件损坏时从零开始计并写一条警告，不影响启动。Web 界面的工具页显示这些数字并
 可清零，也可直接删掉这个文件。
+
+`embeddings.bin` 是嵌入模型的向量索引：开头的 JSON 头部记录模型、维度与每个工具，
+后面跟着向量本身。读不出来时记一条警告并从零重建，不阻止启动；关闭嵌入模型不会
+删掉它。
 
 按以下顺序决定它的位置：
 

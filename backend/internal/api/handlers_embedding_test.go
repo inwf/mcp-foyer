@@ -11,6 +11,7 @@ import (
 
 	"mcp-foyer/internal/api"
 	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/semantic"
 )
 
 // fakeEmbedding stands in for an OpenAI-compatible service and records
@@ -180,5 +181,65 @@ func TestAProbeWithAMalformedBodyIsABadRequest(t *testing.T) {
 	resp := h.raw(t, http.MethodPost, "/api/embedding/test", `{"embedding":{"urlr":"x"}}`)
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400 for a misspelled field", resp.StatusCode)
+	}
+}
+
+// stubStatus is an index standing in for the real one, so that what is
+// under test is the endpoint and not the indexer.
+type stubStatus struct{}
+
+func (stubStatus) Status() semantic.Status {
+	return semantic.Status{
+		Enabled: true, Model: "bge-m3", Dimension: 8,
+		Indexed: 3, Total: 10, Building: true, LastError: "the service is down",
+	}
+}
+
+func TestTheEmbeddingStatusComesFromTheIndex(t *testing.T) {
+	h := start(t, func(o *api.Options) { o.Semantic = stubStatus{} })
+
+	var got struct {
+		Enabled   bool   `json:"enabled"`
+		Model     string `json:"model"`
+		Indexed   int    `json:"indexed"`
+		Total     int    `json:"total"`
+		Building  bool   `json:"building"`
+		LastError string `json:"lastError"`
+	}
+	decode(t, h.get(t, "/api/embedding/status"), http.StatusOK, &got)
+
+	if !got.Enabled || got.Indexed != 3 || got.Total != 10 || !got.Building {
+		t.Errorf("status = %+v, want the index's own numbers", got)
+	}
+	if got.LastError != "the service is down" {
+		t.Errorf("lastError = %q, want the reason the index recorded", got.LastError)
+	}
+}
+
+// A process with no index still answers, with what the configuration
+// says — the page asks either way.
+func TestTheEmbeddingStatusWithoutAnIndexSaysWhatTheConfigurationSays(t *testing.T) {
+	// The address and model are not decoration: the configuration is
+	// refused at open time when the feature is on without them, which is
+	// the rule this fixture would otherwise be breaking.
+	h := start(t, func(o *api.Options) {
+		o.Configs = configs(t, func(cfg *config.Config) {
+			cfg.Embedding.Enabled = true
+			cfg.Embedding.URL = "https://api.example.com/v1"
+			cfg.Embedding.Model = "bge-m3"
+		})
+	})
+
+	var got struct {
+		Enabled bool `json:"enabled"`
+		Indexed int  `json:"indexed"`
+	}
+	decode(t, h.get(t, "/api/embedding/status"), http.StatusOK, &got)
+
+	if !got.Enabled {
+		t.Error("enabled = false, want what the configuration says")
+	}
+	if got.Indexed != 0 {
+		t.Errorf("indexed = %d, want 0", got.Indexed)
 	}
 }
