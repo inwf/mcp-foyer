@@ -511,6 +511,55 @@ func TestBrowsingToolsOnADisconnectedServer(t *testing.T) {
 	}
 }
 
+// A cross-server search that could not look everywhere says so. Without
+// the list, "the directory has no such tool" and "the server that had
+// one is down" read the same, and the caller stops instead of waiting or
+// asking for the server to be fixed.
+func TestSearchNamesTheServersItCouldNotSearch(t *testing.T) {
+	ups := twoServers()
+	ups.statuses = append(ups.statuses, upstream.Status{Name: "off", State: upstream.StateDisconnected})
+	session := gatewayFixture(t, ups, twoServersConfig(t))
+
+	var page struct {
+		Unavailable []struct {
+			Name  string `json:"name"`
+			State string `json:"state"`
+		} `json:"unavailable"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read"}), &page)
+
+	want := []struct{ name, state string }{{"broken", "failed"}, {"off", "disconnected"}}
+	if len(page.Unavailable) != len(want) {
+		t.Fatalf("unavailable = %+v, want %v", page.Unavailable, want)
+	}
+	for i, want := range want {
+		if page.Unavailable[i].Name != want.name || page.Unavailable[i].State != want.state {
+			t.Errorf("unavailable[%d] = %+v, want %s %s", i, page.Unavailable[i], want.name, want.state)
+		}
+	}
+}
+
+// The list stays out when nothing was skipped: it is not a permanent
+// resident of every healthy search result, and browsing one server
+// cannot skip anything, since a server that is down is refused outright.
+func TestSearchOmitsUnavailableWhenItSkippedNothing(t *testing.T) {
+	ups := twoServers()
+	ups.statuses = ups.statuses[:1] // files alone is up
+	session := gatewayFixture(t, ups, twoServersConfig(t))
+
+	for name, args := range map[string]map[string]any{
+		"across servers": {"query": "read"},
+		"one server":     {"server": "files"},
+	} {
+		var raw map[string]any
+		structured(t, callSystemTool(t, session, gateway.ToolSearchTools, args), &raw)
+		if _, present := raw["unavailable"]; present {
+			t.Errorf("%s: the result carries unavailable even though nothing was skipped", name)
+		}
+	}
+}
+
 func TestGetTool(t *testing.T) {
 	session := gatewayFixture(t, twoServers(), twoServersConfig(t))
 

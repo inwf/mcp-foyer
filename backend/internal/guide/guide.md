@@ -186,6 +186,8 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 
 搜索结果和工具详情都用 `server` + `tool` 标识工具；`exposed` 是可直接调用的
 对外名，未暴露时为空。结果按 `score` 排序；`matched` 是命中的查询词数，只供参考。
+跨服务器搜索时，未连接的服务器会列在 `unavailable` 里（名字与状态）；原因不重复，
+`list_servers` 和单台浏览都会给出，一切正常时该字段不出现。
 
 mcp-foyer 自己的工具直接调用。要查看它们，用 `server="mcp-foyer"`：
 

@@ -17,13 +17,17 @@
 | 工具 | 输入 | 返回 |
 | --- | --- | --- |
 | `list_servers` | 无 | 配置的服务器名称、描述、状态、握手 title、工具/资源数量和错误 |
-| `search_tools` | `query` 或 `server`，可加 `limit`、`includeSchema`、`cursor` | `hits`、可选 `nextCursor` 和 `unmatched` |
+| `search_tools` | `query` 或 `server`，可加 `limit`、`includeSchema`、`cursor` | `hits`、可选 `nextCursor`、`unmatched` 和 `unavailable` |
 | `get_tool_details` | `server`、`tool` | 标识、对外名、描述、title、完整输入 schema、annotations |
 | `call_tool` | `server`、`tool`、可选 `args` | 上游原始结果，包括业务错误；`args` 不符合 schema 时直接返回错误，不转发 |
 
 已知目标时直接 `search_tools`，不必先列所有服务器。准备调用时可设置
 `includeSchema=true`，一次搜索就获得参数定义；已知工具也能单独取详情。
 已知 `server`、`tool` 和参数时直接调用，无需重复搜索。系统工具本身直接调用。
+
+跨服务器搜索时，未连接的服务器以名字与状态列在 `unavailable` 里。每条只含名字
+与状态，原因不在这里重复，由 `list_servers` 或单台浏览给出；一切正常时该字段
+不出现。
 
 搜索和详情以 **`server` + `tool`** 标识一个工具，避免不同上游的短名冲突。
 `exposed` 为可直接调用的发布名，未暴露时为空。上游工具即使与系统工具同名，

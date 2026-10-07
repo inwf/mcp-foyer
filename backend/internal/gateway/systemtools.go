@@ -136,6 +136,21 @@ type searchToolsOutput struct {
 	Hits       []searchToolHit `json:"hits"`
 	NextCursor string          `json:"nextCursor,omitempty"`
 	Unmatched  []string        `json:"unmatched,omitempty"`
+
+	// Unavailable names the servers a cross-server search could not look
+	// at. Without it, "the directory has no such tool" and "the server
+	// that had one is down" read the same, and the caller stops instead
+	// of waiting or asking for the server to be fixed.
+	Unavailable []serverState `json:"unavailable,omitempty"`
+}
+
+// serverState is one server a search skipped, and where it stands. The
+// recorded reason stays out: that text can be long, this list rides in
+// every cross-server result, and list_servers and browsing the one
+// server already carry it.
+type serverState struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
 }
 
 const (
@@ -158,8 +173,8 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 		Name: ToolListServers,
 		Description: "Overview of the servers behind this endpoint: each one's name, state, description, " +
 			"tool and resource counts, and the error when it is down. " +
-			"Start here when the servers are unknown; when the capability is known, search_tools finds it directly, " +
-			"and search_tools(server) lists what one server offers.",
+			"Use it to see which servers are connected and which are broken; to find a tool, search_tools " +
+			"matches the capability directly, and search_tools(server) lists what one server offers.",
 		Annotations: readOnly("List servers"),
 	}, func(_ context.Context, _ *mcp.CallToolRequest, _ listServersInput) (*mcp.CallToolResult, listServersOutput, error) {
 		return nil, listServers(ups, cfgs), nil
@@ -171,7 +186,8 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 			"server alone. Most tools are not in this tool list and are only reachable this way; every hit can then be called " +
 			"with call_tool(server, tool, args). Results are ranked best first, five per page by default; includeSchema=true " +
 			"returns each hit's input schema so the call can be prepared from the same result. " +
-			"Words that matched nothing are reported in unmatched, so a thin result can be retried with other words.",
+			"Words that matched nothing are reported in unmatched, so a thin result can be retried with other words. " +
+			"Only connected servers are searched; one that is down is named in unavailable, and browsing it gives the reason.",
 		Annotations: readOnly("Search tools"),
 	}, func(_ context.Context, _ *mcp.CallToolRequest, in searchToolsInput) (*mcp.CallToolResult, searchToolsOutput, error) {
 		out, err := searchTools(ups, cfgs, own, in)
@@ -408,6 +424,11 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 		Hits: make([]searchToolHit, 0, end-start), NextCursor: nextCursor,
 		Unmatched: unmatched,
 	}
+	// Only a cross-server search can skip servers: browsing one names it,
+	// and requireServer has already refused a server that is down.
+	if in.Server == "" {
+		out.Unavailable = unavailableServers(ups)
+	}
 	for _, hit := range hits[start:end] {
 		result := searchToolHit{SearchHit: hit}
 		if in.IncludeSchema {
@@ -419,6 +440,18 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 		out.Hits = append(out.Hits, result)
 	}
 	return out, nil
+}
+
+// unavailableServers names the servers a search could not look at, in
+// the order list_servers uses.
+func unavailableServers(ups Upstreams) []serverState {
+	var out []serverState
+	for _, status := range ups.Statuses() {
+		if !status.Connected() {
+			out = append(out, serverState{Name: status.Name, State: string(status.State)})
+		}
+	}
+	return out
 }
 
 // requireServer reports a usable error when a server is unknown or not
