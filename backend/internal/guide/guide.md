@@ -176,7 +176,9 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
   复数，`readFile` 和 `readfile` 都能找到 `read_file` 且只落到它上面；中文按
   相邻两字匹配，`查询天气` 能找到「查询指定城市的天气」。多个词命中任意一个即
   入选，越少见的词权重越高，命中名字比命中描述权重高，参数权重最低；未命中的
-  词列在 `unmatched`。查询要用目录所用的语言，目录可能中英混合，不确定时两种
+  词列在 `unmatched`。`the`、`what`、`my` 这类虚词不参与匹配和计分，除非它们
+  出现在工具名或服务器名里；整句都是虚词时结果为空，并把它们列进
+  `unmatched`。查询要用目录所用的语言，目录可能中英混合，不确定时两种
   语言的词都写上。
 - `limit` 默认 **5**，范围 **1–20**。显式传 0、负数或大于 20 会报错。
 - `includeSchema` 默认 `false`；设为 `true` 时返回所选结果的完整 schema 和
@@ -189,8 +191,11 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 
 搜索结果和工具详情都用 `server` + `tool` 标识工具；`exposed` 是可直接调用的
 对外名，未暴露时为空。结果按 `score` 排序；`matched` 是命中的查询词数，只供参考。
-跨服务器搜索时，未连接的服务器会列在 `unavailable` 里（名字与状态）；原因不重复，
-`list_servers` 和单台浏览都会给出，一切正常时该字段不出现。
+跨服务器搜索会把命中摊开在多台服务器上，每台最多两条（命中只来自一台时不受限），
+想看一台的全部工具就用 `server` 浏览。
+跨服务器搜索时，未连接的服务器会列在 `unavailable` 里（名字与状态，最多五条，
+其余用 `unavailableMore` 计数）；原因不重复，`list_servers` 和单台浏览都会给出，
+一切正常时该字段不出现。
 
 mcp-foyer 自己的工具直接调用。要查看它们，用 `server="mcp-foyer"`：
 

@@ -241,6 +241,93 @@ func twoServers() *fakeUpstreams {
 // both an exposed tool and an unexposed one — which is what an ordinary
 // installation looks like, and what the reported exposed name has to
 // distinguish.
+// A cross-server page shows each server at most a couple of hits. At
+// directory scale one server's near-identical tools would otherwise fill
+// the page and the caller would never learn the other servers exist;
+// browsing one server still shows everything it has.
+func TestACrossServerPageSpreadsAcrossServers(t *testing.T) {
+	ups := &fakeUpstreams{
+		statuses: []upstream.Status{
+			{Name: "docs", State: upstream.StateConnected, ToolCount: 3},
+			{Name: "notes", State: upstream.StateConnected, ToolCount: 1},
+		},
+		tools: map[string][]*mcp.Tool{
+			"docs": {
+				{Name: "read_page", Description: "read a page of documentation"},
+				{Name: "read_section", Description: "read a section of documentation"},
+				{Name: "read_index", Description: "read the documentation index"},
+			},
+			"notes": {
+				{Name: "read_note", Description: "read a saved note"},
+			},
+		},
+	}
+	cfgs := configFixture(t, map[string]config.MCPServer{
+		"docs":  {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+		"notes": {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+	})
+	session := gatewayFixture(t, ups, cfgs)
+
+	type hit struct {
+		Server string `json:"server"`
+		Tool   string `json:"tool"`
+	}
+	var page struct {
+		Hits []hit `json:"hits"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read"}), &page)
+
+	perServer := map[string]int{}
+	for _, h := range page.Hits {
+		perServer[h.Server]++
+	}
+	if perServer["docs"] != 2 {
+		t.Errorf("docs contributed %d hits, want 2: %+v", perServer["docs"], page.Hits)
+	}
+	if perServer["notes"] != 1 {
+		t.Errorf("the spread dropped another server's hits: %+v", page.Hits)
+	}
+
+	// Browsing is not bounded: that is where a caller goes for all of a
+	// server's tools.
+	page.Hits = nil
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"server": "docs"}), &page)
+	if len(page.Hits) != 3 {
+		t.Errorf("browsing docs = %d hits, want all 3: %+v", len(page.Hits), page.Hits)
+	}
+}
+
+// A directory with dozens of servers down must not carry dozens of
+// entries in every result: five are named and the rest are counted.
+func TestUnavailableIsBoundedAndCounted(t *testing.T) {
+	ups := twoServers()
+	for _, name := range []string{"down-a", "down-b", "down-c", "down-d", "down-e", "down-f"} {
+		ups.statuses = append(ups.statuses, upstream.Status{
+			Name: name, State: upstream.StateFailed, Error: "connection refused",
+		})
+	}
+	session := gatewayFixture(t, ups, twoServersConfig(t))
+
+	var page struct {
+		Unavailable []struct {
+			Name  string `json:"name"`
+			State string `json:"state"`
+		} `json:"unavailable"`
+		UnavailableMore int `json:"unavailableMore"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read"}), &page)
+
+	if len(page.Unavailable) != 5 {
+		t.Errorf("unavailable = %d entries, want the bound of 5: %+v", len(page.Unavailable), page.Unavailable)
+	}
+	if page.UnavailableMore != 2 {
+		t.Errorf("unavailableMore = %d, want 2", page.UnavailableMore)
+	}
+}
+
 func twoServersConfig(t *testing.T) *config.Manager {
 	return configFixture(t, map[string]config.MCPServer{
 		"files": {

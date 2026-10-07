@@ -142,6 +142,11 @@ type searchToolsOutput struct {
 	// that had one is down" read the same, and the caller stops instead
 	// of waiting or asking for the server to be fixed.
 	Unavailable []serverState `json:"unavailable,omitempty"`
+
+	// UnavailableMore counts the down servers past the ones named, so
+	// that a directory with dozens down does not put dozens of entries
+	// into every result.
+	UnavailableMore int `json:"unavailableMore,omitempty"`
 }
 
 // serverState is one server a search skipped, and where it stands. The
@@ -186,8 +191,12 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, own Ow
 			"server alone. Most tools are not in this tool list and are only reachable this way; every hit can then be called " +
 			"with call_tool(server, tool, args). Results are ranked best first, five per page by default; includeSchema=true " +
 			"returns each hit's input schema so the call can be prepared from the same result. " +
-			"Words that matched nothing are reported in unmatched, so a thin result can be retried with other words. " +
-			"Only connected servers are searched; one that is down is named in unavailable, and browsing it gives the reason.",
+			"Words that matched nothing are reported in unmatched; words too common to tell tools apart " +
+			"(the, what, my) are ignored, so a query made only of them comes back empty and names them. " +
+			"A cross-server search spreads its hits, at most two per server unless only one matched; " +
+			"browse one server to see all it has. " +
+			"Servers that are not connected are named in unavailable, up to five, with unavailableMore counting the rest; " +
+			"browsing one gives the reason.",
 		Annotations: readOnly("Search tools"),
 	}, func(_ context.Context, _ *mcp.CallToolRequest, in searchToolsInput) (*mcp.CallToolResult, searchToolsOutput, error) {
 		out, err := searchTools(ups, cfgs, own, in)
@@ -414,6 +423,13 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 		}
 	}
 	hits, unmatched := searchCandidates(in.Query, candidates, 0)
+	// A cross-server page shows each server at most a couple of hits, so
+	// that one server's near-identical tools cannot fill it; browsing a
+	// server is where a caller sees everything it has. The spread runs
+	// before the page is cut and hashed, so cursors page over it.
+	if in.Server == "" && spansServers(hits) {
+		hits = spreadAcrossServers(hits, hitsPerServer)
+	}
 	start, nextCursor, err := searchPageCursor(in, hits, limit)
 	if err != nil {
 		return searchToolsOutput{}, err
@@ -427,7 +443,7 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 	// Only a cross-server search can skip servers: browsing one names it,
 	// and requireServer has already refused a server that is down.
 	if in.Server == "" {
-		out.Unavailable = unavailableServers(ups)
+		out.Unavailable, out.UnavailableMore = unavailableServers(ups)
 	}
 	for _, hit := range hits[start:end] {
 		result := searchToolHit{SearchHit: hit}
@@ -442,16 +458,69 @@ func searchTools(ups Upstreams, cfgs Configs, own OwnTools, in searchToolsInput)
 	return out, nil
 }
 
-// unavailableServers names the servers a search could not look at, in
-// the order list_servers uses.
-func unavailableServers(ups Upstreams) []serverState {
-	var out []serverState
-	for _, status := range ups.Statuses() {
-		if !status.Connected() {
-			out = append(out, serverState{Name: status.Name, State: string(status.State)})
+// hitsPerServer bounds what one server contributes to a cross-server
+// search. At directory scale the same capability sits on many servers,
+// and without the bound one server's near-identical tools can take the
+// whole page while the caller never learns the others exist. A search
+// that only one server answered is left whole: there is nothing to
+// spread to, and hiding the rest of that server's tools would just lose
+// them. Browsing a single server is never bounded: that is where a
+// caller goes for everything it has.
+const hitsPerServer = 2
+
+// spansServers reports whether the hits come from more than one server,
+// which is when spreading them is worth anything.
+func spansServers(hits []SearchHit) bool {
+	first := ""
+	for _, hit := range hits {
+		if first == "" {
+			first = hit.Server
+			continue
+		}
+		if hit.Server != first {
+			return true
 		}
 	}
+	return false
+}
+
+// spreadAcrossServers keeps at most perServer hits of each server, in
+// the order they were ranked. The slice is reused in place: it was built
+// for this call and nothing else holds it.
+func spreadAcrossServers(hits []SearchHit, perServer int) []SearchHit {
+	counts := make(map[string]int)
+	out := hits[:0]
+	for _, hit := range hits {
+		if counts[hit.Server] >= perServer {
+			continue
+		}
+		counts[hit.Server]++
+		out = append(out, hit)
+	}
 	return out
+}
+
+// unavailableShown bounds how many down servers a result names. A
+// directory of a thousand servers will often have a couple of dozen
+// down, and carrying them all in every result costs more than it says.
+const unavailableShown = 5
+
+// unavailableServers names the servers a search could not look at, in
+// the order list_servers uses, and counts the ones beyond the bound.
+func unavailableServers(ups Upstreams) ([]serverState, int) {
+	var out []serverState
+	more := 0
+	for _, status := range ups.Statuses() {
+		if status.Connected() {
+			continue
+		}
+		if len(out) == unavailableShown {
+			more++
+			continue
+		}
+		out = append(out, serverState{Name: status.Name, State: string(status.State)})
+	}
+	return out, more
 }
 
 // requireServer reports a usable error when a server is unknown or not

@@ -13,10 +13,11 @@ type SearchHit struct {
 	Exposed     string `json:"exposed"`
 	Description string `json:"description,omitempty"`
 
-	// Matched is how many of the query's words this tool matched. It
-	// does not order the results — a rare word answered once says more
-	// than three common ones — but it lets a caller tell a tool that
-	// answered the whole question from one that answered a word of it.
+	// Matched is how many of the query's words this tool matched, not
+	// counting the words too common to tell tools apart. It does not
+	// order the results — a rare word answered once says more than three
+	// common ones — but it lets a caller tell a tool that answered the
+	// whole question from one that answered a word of it.
 	Matched int `json:"matched"`
 
 	// Score is relative: it orders one search's hits and means nothing
@@ -97,6 +98,13 @@ const (
 // Which terms found nothing is worth knowing separately — see
 // [UnmatchedTerms].
 //
+// Words that carry no capability — articles, pronouns, auxiliaries, the
+// verbs of asking (see [commonQueryWords]) — are cut before anything is
+// scored, unless they name a tool, a server or a parameter. They sit in
+// most descriptions, so matching them says nothing about which tool the
+// caller meant, and a query made only of them comes back empty instead
+// of ranked.
+//
 // A blank query matches everything, so that a caller can page through
 // the full list with the same call. Ties break on the origin rather than
 // on the exposed name, which is empty for every tool an installation has
@@ -107,7 +115,9 @@ func SearchTools(query string, candidates []Searchable, limit int) []SearchHit {
 }
 
 // UnmatchedTerms returns the query words that appear in no candidate at
-// all, spelled as the caller wrote them.
+// all, spelled as the caller wrote them. A query of nothing but common
+// words returns nothing and reports those words here, so that an empty
+// result always carries a reason.
 //
 // It exists so that an empty or thin result can say why. "No hits" reads
 // as "this gateway cannot do that", which is a conclusion a caller should
@@ -124,13 +134,18 @@ func searchCandidates(query string, candidates []Searchable, limit int) ([]Searc
 	words := strings.Fields(query)
 	idx := indexCandidates(candidates)
 
-	scores := idx.scores(queryTerms(words))
-	matched := idx.wordsMatched(words)
+	// The words that cannot tell one tool from another are cut before
+	// scoring, so the hits, the scores and the matched counts all
+	// describe what the words that can did find.
+	distinctive := idx.distinctiveWords(words)
+	scores := idx.scores(queryTerms(distinctive))
+	matched := idx.wordsMatched(distinctive)
 
 	hits := make([]SearchHit, 0, len(candidates))
 	for i, candidate := range candidates {
 		// A query with no words asks for everything; one with words asks
-		// for the tools that answered at least one of them.
+		// for the tools that answered at least one of them. A query of
+		// nothing but common words asks for nothing, and gets it.
 		if len(words) > 0 && matched[i] == 0 {
 			continue
 		}
@@ -165,6 +180,12 @@ func searchCandidates(query string, candidates []Searchable, limit int) ([]Searc
 		if !slices.ContainsFunc(wordTerms(word), idx.has) {
 			unmatched = append(unmatched, word)
 		}
+	}
+	// Nothing came back and no word explains it: every word was common.
+	// Name them, or an empty result would read as "this endpoint cannot
+	// do that" with no reason given.
+	if len(hits) == 0 && len(unmatched) == 0 && len(words) > 0 {
+		unmatched = append(unmatched, words...)
 	}
 	return hits, unmatched
 }

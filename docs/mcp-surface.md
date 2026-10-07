@@ -17,7 +17,7 @@
 | 工具 | 输入 | 返回 |
 | --- | --- | --- |
 | `list_servers` | 无 | 配置的服务器名称、描述、状态、握手 title、工具/资源数量和错误 |
-| `search_tools` | `query` 或 `server`，可加 `limit`、`includeSchema`、`cursor` | `hits`、可选 `nextCursor`、`unmatched` 和 `unavailable` |
+| `search_tools` | `query` 或 `server`，可加 `limit`、`includeSchema`、`cursor` | `hits`、可选 `nextCursor`、`unmatched`、`unavailable` 与 `unavailableMore` |
 | `get_tool_details` | `server`、`tool` | 标识、对外名、描述、title、完整输入 schema、annotations |
 | `call_tool` | `server`、`tool`、可选 `args` | 上游原始结果，包括业务错误；`args` 不符合 schema 时直接返回错误，不转发 |
 
@@ -25,9 +25,10 @@
 `includeSchema=true`，一次搜索就获得参数定义；已知工具也能单独取详情。
 已知 `server`、`tool` 和参数时直接调用，无需重复搜索。系统工具本身直接调用。
 
-跨服务器搜索时，未连接的服务器以名字与状态列在 `unavailable` 里。每条只含名字
-与状态，原因不在这里重复，由 `list_servers` 或单台浏览给出；一切正常时该字段
-不出现。
+跨服务器搜索时，未连接的服务器以名字与状态列在 `unavailable` 里，最多五条，其余
+用 `unavailableMore` 计数。每条只含名字与状态，原因不在这里重复，由 `list_servers`
+或单台浏览给出；一切正常时该字段不出现。跨服务器搜索会把命中摊开在多台服务器上，每台最多两条（命中只来自一台时不受限）；
+想看一台的全部工具就用 `server` 浏览，浏览不受限。
 
 搜索和详情以 **`server` + `tool`** 标识一个工具，避免不同上游的短名冲突。
 `exposed` 为可直接调用的发布名，未暴露时为空。上游工具即使与系统工具同名，
@@ -82,7 +83,9 @@ mcp-foyer 记录模型对每个工具的使用：`search_tools` 返回给模型�
 `read_file`，不会落到 `read_files` 上；查询一侧同时带折叠复数的拼写，所以
 `listissues` 也能找到 `list_issues`。只按 `score` 排序，平局以服务器名和工具名稳定
 排序；`matched` 报告命中的查询词数，不参与排序。没有匹配任何候选的词放在
-`unmatched`，不抹掉其他词的结果。
+`unmatched`，不抹掉其他词的结果；`the`、`what`、`my` 这类虚词不参与匹配与计分
+（出现在工具名或服务器名里时除外），整句都是虚词时结果为空并全部列进
+`unmatched`。
 
 查询要用目录所用的语言：中文查询打到纯英文的目录不会有结果。目录可能中英混合，
 不确定时两种语言的词都写上，命中任一种即可。

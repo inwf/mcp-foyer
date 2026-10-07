@@ -234,10 +234,12 @@ func TestSearchingEveryToolKeepsTheUnexposedOnesApart(t *testing.T) {
 	var got struct {
 		Tools []api.AggregatedTool `json:"tools"`
 	}
-	// "to" is a whole word in the descriptions of sleep ("to provoke a
-	// timeout") and fail ("to exercise failure handling"), neither of
-	// which is exposed.
-	stack.apiGet(t, "/api/tools?all=true&limit=100&q=to", &got)
+	// "provoke" and "exercise" are whole words in the descriptions of
+	// sleep ("blocks for a while, to provoke a timeout") and fail
+	// ("always reports an error, to exercise failure handling"), neither
+	// of which is exposed. The function words in those descriptions match
+	// nothing: the search ignores them.
+	stack.apiGet(t, "/api/tools?all=true&limit=100&q=provoke%20exercise", &got)
 
 	seen := map[string]bool{}
 	for _, tool := range got.Tools {
