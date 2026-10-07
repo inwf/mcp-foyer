@@ -250,6 +250,10 @@ func serve(ctx context.Context, opts serveOptions, stdout, stderr io.Writer) err
 	// told when they arrive, which is what the notification is for.
 	go func() {
 		ups.ConnectAll(ctx, cfg.Startup)
+		// From here on a server that fails or drops comes back on its
+		// own. Until ConnectAll returns, its own retries are the only
+		// ones running, so the two never race for the same server.
+		ups.KeepConnected(ctx, upstream.RetryPolicyFrom(cfg.Startup))
 		g.Sync()
 	}()
 

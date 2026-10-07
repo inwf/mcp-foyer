@@ -142,6 +142,9 @@ mcp-foyer servers add remote --url https://example.com/mcp \
 mcp-foyer servers list
 ```
 
+启动时没连上的服务器不会一直停在失败里：它和掉线一样，会按退避自动重连，直到
+连上为止。主动断开的不会——想让它回来，再连一次。
+
 ## 自带的系统工具
 
 mcp-foyer 提供四个系统工具，按需发现上游能力。默认的 `tools/list` 只包含这四个，

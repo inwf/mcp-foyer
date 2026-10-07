@@ -37,6 +37,22 @@ type Manager struct {
 	mu    sync.RWMutex
 	conns map[string]*Conn
 	cfgs  map[string]config.MCPServer
+
+	// desired marks the servers the manager means to keep connected:
+	// connecting, at startup or on demand, sets it; Disconnect, removal
+	// and shutdown clear it. A failure of a desired server is what the
+	// supervisor retries.
+	desired map[string]bool
+
+	// busy marks a server a connect run is already working on: a
+	// deliberate Connect, or a supervisor loop. One run per server at a
+	// time, and a failure that arrives mid-run does not start a second.
+	busy map[string]bool
+
+	// Set once by KeepConnected, before any loop can read them.
+	supervising bool
+	superCtx    context.Context
+	superPolicy RetryPolicy
 }
 
 // NewManager returns an empty manager. Call [Manager.Apply] to populate
@@ -53,6 +69,8 @@ func NewManager(version string, log *logging.Logger, bus *events.Bus) *Manager {
 		own:     own,
 		conns:   map[string]*Conn{},
 		cfgs:    map[string]config.MCPServer{},
+		desired: map[string]bool{},
+		busy:    map[string]bool{},
 	}
 }
 
@@ -91,6 +109,7 @@ func (m *Manager) Apply(cfg config.Config) (added, removed, changed []string) {
 		stale = append(stale, m.conns[name])
 		delete(m.conns, name)
 		delete(m.cfgs, name)
+		delete(m.desired, name)
 	}
 	for _, name := range changed {
 		stale = append(stale, m.conns[name])
@@ -165,10 +184,17 @@ func (m *Manager) Connect(ctx context.Context, name string, startup config.Start
 }
 
 func (m *Manager) connect(ctx context.Context, name string, policy RetryPolicy) error {
-	conn, ok := m.Get(name)
+	m.mu.Lock()
+	conn, ok := m.conns[name]
 	if !ok {
+		m.mu.Unlock()
 		return fmt.Errorf("%s: %w", name, ErrUnknownServer)
 	}
+	m.desired[name] = true
+	m.busy[name] = true
+	m.mu.Unlock()
+
+	defer m.releaseBusy(name)
 	return conn.ConnectWithRetry(ctx, policy)
 }
 
@@ -178,14 +204,20 @@ func (m *Manager) Disconnect(name string) error {
 	if !ok {
 		return fmt.Errorf("%s: %w", name, ErrUnknownServer)
 	}
+	// Wanted first, so that a retry loop already waiting does not bring
+	// the server back up after this call.
+	m.mu.Lock()
+	delete(m.desired, name)
+	m.mu.Unlock()
 	return conn.Close()
 }
 
 // CloseAll disconnects every server. Used at shutdown.
 func (m *Manager) CloseAll() {
-	m.mu.RLock()
+	m.mu.Lock()
 	conns := slices.Collect(maps.Values(m.conns))
-	m.mu.RUnlock()
+	m.desired = map[string]bool{}
+	m.mu.Unlock()
 
 	var wg sync.WaitGroup
 	for _, conn := range conns {
@@ -196,6 +228,110 @@ func (m *Manager) CloseAll() {
 		}(conn)
 	}
 	wg.Wait()
+}
+
+// KeepConnected retries servers the manager means to keep connected
+// after they fail, until the context ends or they are disconnected.
+//
+// maxRetries and retryBackoff bound one connect run, and a dropped
+// session is not a run at all. Without this, a server that was down at
+// startup or died mid-session stays failed for the life of the process,
+// which for a machine-local endpoint is the ordinary case of a child
+// process that crashed. Attempts follow the same backoff, capped, and
+// they stop the moment the server is disconnected: a server switched
+// off on purpose stays off.
+func (m *Manager) KeepConnected(ctx context.Context, policy RetryPolicy) {
+	m.mu.Lock()
+	m.superCtx, m.superPolicy = ctx, policy
+	m.supervising = true
+	stale := make([]string, 0, len(m.desired))
+	for name := range m.desired {
+		if conn, ok := m.conns[name]; ok && !conn.Status().Connected() {
+			stale = append(stale, name)
+		}
+	}
+	m.mu.Unlock()
+
+	for _, name := range stale {
+		m.noteFailure(name)
+	}
+}
+
+// noteFailure starts a retry loop for a server that failed while the
+// manager meant to keep it. It runs on the path a connection uses to
+// announce every state change, so it stays cheap and never blocks, and
+// the busy mark is what keeps repeated failures from stacking up
+// repeated loops.
+func (m *Manager) noteFailure(name string) {
+	m.mu.Lock()
+	// A finished context is shutdown, not a failure to retry: a loop
+	// spawned now would wake, see the context, and hand the server
+	// straight back here.
+	if !m.supervising || m.busy[name] || !m.desired[name] || m.superCtx.Err() != nil {
+		m.mu.Unlock()
+		return
+	}
+	if _, ok := m.conns[name]; !ok {
+		m.mu.Unlock()
+		return
+	}
+	m.busy[name] = true
+	ctx, policy := m.superCtx, m.superPolicy
+	m.mu.Unlock()
+
+	go m.reconnect(ctx, name, policy)
+}
+
+// reconnect keeps one server coming back until it is connected, the
+// context ends, or someone disconnects it.
+func (m *Manager) reconnect(ctx context.Context, name string, policy RetryPolicy) {
+	defer m.releaseBusy(name)
+
+	for attempt := 0; ; attempt++ {
+		if err := policy.sleep(ctx, policy.delay(attempt)); err != nil {
+			return
+		}
+		if !m.wantsConnected(name) {
+			return
+		}
+		conn, ok := m.Get(name)
+		if !ok {
+			return
+		}
+		if err := conn.Connect(ctx); err == nil && conn.Status().Connected() {
+			return
+		}
+	}
+}
+
+// releaseBusy gives up a server's connect slot, then looks again: a
+// failure that arrived while the slot was held asked for a retry and was
+// turned away, and this is the only place that can let it back in.
+func (m *Manager) releaseBusy(name string) {
+	m.mu.Lock()
+	delete(m.busy, name)
+	m.mu.Unlock()
+
+	if m.failedAndWanted(name) {
+		m.noteFailure(name)
+	}
+}
+
+func (m *Manager) wantsConnected(name string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.supervising && m.desired[name]
+}
+
+func (m *Manager) failedAndWanted(name string) bool {
+	m.mu.RLock()
+	wanted := m.supervising && m.desired[name] && m.superCtx.Err() == nil
+	m.mu.RUnlock()
+	if !wanted {
+		return false
+	}
+	conn, ok := m.Get(name)
+	return ok && !conn.Status().Connected()
 }
 
 // Get returns the connection for a name.
@@ -285,6 +421,14 @@ func (m *Manager) newConn(name string, cfg config.MCPServer) *Conn {
 // event. Keeping the translation here is what lets the upstream package
 // stay unaware of the bus.
 func (m *Manager) publish(server string, kind ChangeKind) {
+	// Supervision is independent of the bus: a manager without one still
+	// brings its servers back.
+	if kind == ChangeStatus {
+		if conn, ok := m.Get(server); ok && conn.Status().State == StateFailed {
+			m.noteFailure(server)
+		}
+	}
+
 	if m.bus == nil {
 		return
 	}

@@ -96,7 +96,9 @@ func (c *Conn) ConnectWithRetry(ctx context.Context, policy RetryPolicy) error {
 				"attempt", attempt+1, "of", policy.MaxRetries+1, "after", delay)
 
 			if err := policy.sleep(ctx, delay); err != nil {
-				return fmt.Errorf("connect %s: gave up waiting to retry: %w", c.name, err)
+				summary := fmt.Errorf("connect %s: gave up waiting to retry: %w", c.name, err)
+				c.recordConnectFailure(summary)
+				return summary
 			}
 		}
 
@@ -109,10 +111,26 @@ func (c *Conn) ConnectWithRetry(ctx context.Context, policy RetryPolicy) error {
 		// A cancelled context will not be any better on the next
 		// attempt, so stop rather than burn through the budget.
 		if ctx.Err() != nil {
-			return fmt.Errorf("connect %s: %w", c.name, ctx.Err())
+			summary := fmt.Errorf("connect %s: stopped after %d attempt(s): %w", c.name, attempt+1, ctx.Err())
+			c.recordConnectFailure(summary)
+			return summary
 		}
 	}
 
 	attempts := policy.MaxRetries + 1
-	return fmt.Errorf("connect %s: gave up after %d attempt(s): %w", c.name, attempts, lastErr)
+	summary := fmt.Errorf("connect %s: gave up after %d attempt(s): %w", c.name, attempts, lastErr)
+	c.recordConnectFailure(summary)
+	return summary
+}
+
+// recordConnectFailure puts the summary of a whole connect run into the
+// status, where list_servers and the web console read it. The last
+// attempt's own error can read like "context canceled", which tells
+// whoever has to fix the server nothing; the summary says how many
+// attempts were made and what the last one said.
+func (c *Conn) recordConnectFailure(err error) {
+	c.mu.Lock()
+	c.setStateLocked(StateFailed, err)
+	c.mu.Unlock()
+	c.deps.notify(c.name, ChangeStatus)
 }

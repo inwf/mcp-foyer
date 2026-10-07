@@ -230,6 +230,34 @@ func TestDefaultSleepRespectsTheContext(t *testing.T) {
 	}
 }
 
+// The status keeps the story of the whole run, not the last attempt's
+// error: "context canceled" alone tells whoever has to fix the server
+// nothing.
+func TestConnectWithRetryRecordsItsSummaryInTheStatus(t *testing.T) {
+	conn := New("broken", config.MCPServer{
+		Transport: config.TransportStdio,
+		Command:   "/nonexistent/definitely-not-a-program",
+		Timeout:   time.Second,
+	}, "test", Deps{})
+
+	policy := RetryPolicy{
+		MaxRetries: 2,
+		Backoff:    time.Millisecond,
+		Sleep:      func(context.Context, time.Duration) error { return nil },
+	}
+	if err := conn.ConnectWithRetry(context.Background(), policy); err == nil {
+		t.Fatal("ConnectWithRetry succeeded unexpectedly")
+	}
+
+	status := conn.Status()
+	if status.State != StateFailed {
+		t.Errorf("state = %q, want failed", status.State)
+	}
+	if !contains(status.Error, "gave up after 3 attempt(s)") {
+		t.Errorf("status error %q does not carry the run's summary", status.Error)
+	}
+}
+
 func contains(haystack, needle string) bool {
 	return len(haystack) >= len(needle) && indexOf(haystack, needle) >= 0
 }
