@@ -71,10 +71,13 @@ var fieldWeights = [fieldCount]float64{
 // BM25 parameters. k1 bounds how much repeating a term can add, so that
 // a description saying "file" five times does not outrank a name saying
 // it once. b is how much a long field is discounted for having had more
-// chances to contain the term.
+// chances to contain the term; it sits below the usual 0.75 because
+// real tool descriptions run from one terse line to several paragraphs,
+// and at directory scale the standard discount let the shortest
+// plausible neighbour outrank the tool the caller meant.
 const (
 	bm25K1 = 1.2
-	bm25B  = 0.75
+	bm25B  = 0.6
 )
 
 // SearchTools ranks candidates against a query.
@@ -181,36 +184,73 @@ func lowerTerms(query string) []string {
 // [wordTerms]), plus the whole query joined into one — the form under
 // which every tool's name is indexed — so that a query spelling a
 // complete name in several words ("read file") meets read_file exactly.
+// The join is carried in both spellings, since only the caller's words
+// know which number it meant.
 func queryTerms(words []string) []string {
-	var terms, joined []string
+	var terms, pieces []string
 	for _, word := range words {
 		terms = append(terms, wordTerms(word)...)
-		joined = append(joined, tokenize(word)...)
+		pieces = append(pieces, tokenizeVerbatim(word)...)
 	}
-	if len(joined) > 1 {
-		terms = append(terms, strings.Join(joined, ""))
-	}
+	written, folded := joinedSpellings(pieces, foldedPieces(pieces))
+	terms = appendNewTerms(terms, written, folded)
 	slices.Sort(terms)
 	return slices.Compact(terms)
 }
 
 // wordTerms are one query word's terms plus, when it split, the word
 // joined back together: readFile is read, file and readfile, and it is
-// the last of these that meets a name indexed as readfile.
+// the last of these that meets a name indexed as readfile. The written
+// spelling rides along too, so that a caller who writes listissues
+// still meets list_issues.
 func wordTerms(word string) []string {
-	return joinedTerms(tokenize(word))
+	pieces := tokenizeVerbatim(word)
+	terms := appendNewTerms(foldedPieces(pieces), pieces...)
+	written, folded := joinedSpellings(pieces, foldedPieces(pieces))
+	return appendNewTerms(terms, written, folded)
 }
 
-// nameTerms are a tool name's terms plus the name joined into one, so
+// nameTerms are a tool name's terms plus the name joined as written, so
 // that readfile finds read_file: the joined form is what a caller writes
-// when it does not know how the name is spelled.
+// when it does not know how the name is spelled. The folded spelling is
+// deliberately not indexed here, because read_file and read_files would
+// join to the same term and a caller spelling either exactly would land
+// on both. The folded join lives on the query side instead.
 func nameTerms(name string) []string {
-	return joinedTerms(tokenize(name))
+	pieces := tokenizeVerbatim(name)
+	written, _ := joinedSpellings(pieces, nil)
+	for i, piece := range pieces {
+		pieces[i] = foldTerm(piece)
+	}
+	return appendNewTerms(pieces, written)
 }
 
-func joinedTerms(terms []string) []string {
-	if len(terms) > 1 {
-		terms = append(terms, strings.Join(terms, ""))
+// joinedSpellings are the ways a piece sequence is joined into one term:
+// as written, and, when folding plurals changes it, the folded spelling
+// too. A sequence of fewer than two pieces has no joined form and
+// reports none.
+func joinedSpellings(written, folded []string) (string, string) {
+	if len(written) < 2 {
+		return "", ""
+	}
+	joined := strings.Join(written, "")
+	if len(folded) < 2 {
+		return joined, ""
+	}
+	if f := strings.Join(folded, ""); f != joined {
+		return joined, f
+	}
+	return joined, ""
+}
+
+// appendNewTerms appends the terms not already in the list, skipping the
+// empty string, which the join helpers use to mean "no joined form". A
+// repeat would otherwise double a term's count in the index.
+func appendNewTerms(terms []string, more ...string) []string {
+	for _, term := range more {
+		if term != "" && !slices.Contains(terms, term) {
+			terms = append(terms, term)
+		}
 	}
 	return terms
 }
@@ -219,10 +259,17 @@ func joinedTerms(terms []string) []string {
 // word's joined form as well, so that a parameter name is matched the
 // way a tool name is: a caller writing fullPage or full_page meets
 // fullPage exactly, rather than as the two common words it splits into.
+// The join keeps the written spelling, as it does for names.
 func argumentTerms(text string) []string {
 	var terms []string
 	for _, word := range strings.Fields(text) {
-		terms = append(terms, wordTerms(word)...)
+		pieces := tokenizeVerbatim(word)
+		written, _ := joinedSpellings(pieces, nil)
+		for i, piece := range pieces {
+			pieces[i] = foldTerm(piece)
+		}
+		terms = append(terms, pieces...)
+		terms = appendNewTerms(terms, written)
 	}
 	return terms
 }

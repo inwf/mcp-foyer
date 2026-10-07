@@ -28,6 +28,34 @@ import (
 // directory is tokenized on every search, so what this allocates is what
 // a search costs.
 func tokenize(s string) []string {
+	terms := splitPieces(s)
+	for i, term := range terms {
+		terms[i] = foldTerm(term)
+	}
+	return terms
+}
+
+// tokenizeVerbatim splits like tokenize but keeps every word in the
+// spelling it was written in. The search joins a name into one term in
+// both spellings, which is what keeps read_file and read_files apart.
+func tokenizeVerbatim(s string) []string {
+	return splitPieces(s)
+}
+
+// foldedPieces returns the pieces with plurals folded, a copy.
+func foldedPieces(pieces []string) []string {
+	folded := make([]string, len(pieces))
+	for i, piece := range pieces {
+		folded[i] = foldTerm(piece)
+	}
+	return folded
+}
+
+// splitPieces cuts text into lowercased words and CJK pairs, in the
+// order they appear, before any plural folding. It is the one walk of
+// the text; folding is a second pass over what it returns, so a caller
+// that needs both spellings splits only once.
+func splitPieces(s string) []string {
 	if s == "" {
 		return nil
 	}
@@ -77,18 +105,18 @@ func tokenize(s string) []string {
 }
 
 // appendWordTerms splits one alphanumeric run at camel-case boundaries
-// and appends each piece, lowered and folded.
+// and appends each piece, lowered.
 func appendWordTerms(out []string, word string) []string {
 	start := 0
 	var prev rune
 	for i, r := range word {
 		if i > 0 && isCamelBoundary(prev, r, word[i+utf8.RuneLen(r):]) {
-			out = append(out, foldTerm(word[start:i]))
+			out = append(out, strings.ToLower(word[start:i]))
 			start = i
 		}
 		prev = r
 	}
-	return append(out, foldTerm(word[start:]))
+	return append(out, strings.ToLower(word[start:]))
 }
 
 // isCamelBoundary reports whether a new word starts at r: an upper-case

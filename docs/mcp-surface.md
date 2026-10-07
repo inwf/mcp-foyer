@@ -74,7 +74,9 @@ mcp-foyer 记录模型对每个工具的使用：`search_tools` 返回给模型�
 一个词在候选中越少见贡献越大，出现在工具名里的权重高于服务器名，再高于描述，
 参数名与参数描述权重最低，长字段按长度折减。名字和参数名还以去掉分隔符的整体
 形式参与匹配，所以 `readfile`、`readFile`、`read file` 都能精确命中 `read_file`，
-`fullPage` 能精确命中同名参数。只按 `score` 排序，平局以服务器名和工具名稳定
+`fullPage` 能精确命中同名参数。整体形式按写出的拼写归档：`readfile` 只命中
+`read_file`，不会落到 `read_files` 上；查询一侧同时带折叠复数的拼写，所以
+`listissues` 也能找到 `list_issues`。只按 `score` 排序，平局以服务器名和工具名稳定
 排序；`matched` 报告命中的查询词数，不参与排序。没有匹配任何候选的词放在
 `unmatched`，不抹掉其他词的结果。
 

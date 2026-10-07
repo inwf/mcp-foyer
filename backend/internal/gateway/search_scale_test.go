@@ -82,41 +82,25 @@ var scaleMisses = map[string]struct {
 	sizes  []string
 	reason string
 }{
-	"readfile": {
-		sizes:  []string{"20x50", "100x50", "100x100"},
-		reason: "generated read_files twins fold to the same read and file terms and match from shorter fields",
-	},
 	"listChannels": {
 		sizes:  []string{"20x50", "100x50", "100x100"},
 		reason: "generated list_channels twins fold to the same terms; the corpus tool's extra slack and channels signals do not make up for its longer fields",
 	},
-	"create issue": {
-		sizes:  []string{"100x100"},
-		reason: "generated create_issues twins fold to the same name terms and match from shorter fields",
-	},
 	"list issues": {
 		sizes:  []string{"100x100"},
-		reason: "generated list_issues twins, the same name twin as create issue",
-	},
-	"fetch url": {
-		sizes:  []string{"20x50", "100x50", "100x100"},
-		reason: "generated fetch_* twins match fetch in the name and url in two-word argument text; the corpus tool's url sits at the end of a long argument field",
+		reason: "the generated twins spell list_issues exactly, so no join separates them; a length gap decides the page",
 	},
 	"knowledge graph search": {
 		sizes:  []string{"20x50", "100x50", "100x100"},
 		reason: "memory's other tools concentrate knowledge and graph in short descriptions; search carries almost no weight once thousands of tools match it",
 	},
 	"how do I read a file": {
-		sizes:  []string{"20x50", "100x50", "100x100"},
+		sizes:  []string{"100x50", "100x100"},
 		reason: "mostly function words; read and file are diluted and three shorter-field neighbours take the page",
 	},
 	"dryRun": {
-		sizes:  []string{"20x50", "100x50", "100x100"},
-		reason: "the camel split matches dry and run; run lands in generated descriptions while the exact dryRun sits in a long argument field at the lowest weight",
-	},
-	"fullPage": {
 		sizes:  []string{"20x50"},
-		reason: "the same camel split: full and page land in generated read_pages names and descriptions, while the exact match is argument-only",
+		reason: "the camel split matches dry and run; run lands in generated descriptions while the exact dryRun sits in a long argument field at the lowest weight",
 	},
 }
 
