@@ -142,6 +142,23 @@
   color: var(--ink-muted);
 }
 
+.probe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+.probeOk {
+  color: var(--ok);
+  font-size: var(--text-xs);
+}
+.probeFail {
+  color: var(--danger);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1100px) {
   .formSection {
     grid-template-columns: 160px minmax(0, 1fr);

@@ -192,23 +192,43 @@ func (c Config) validateStartup(v *validator) {
 	v.positiveDuration("startup.retryBackoff", c.Startup.RetryBackoff)
 }
 
-func (c Config) validateEmbedding(v *validator) {
-	v.positiveDuration("embedding.timeout", c.Embedding.Timeout)
+func (c Config) validateEmbedding(v *validator) { validateEmbedding(v, c.Embedding) }
+
+// ValidateEmbedding reports every problem with an embedding section. It
+// returns nil or a *[ValidationError].
+//
+// This is for a caller holding a section from somewhere other than the
+// configuration file — the settings page testing values it has not saved
+// yet, say. Validating a whole configuration to check one section would
+// report every other section's problems alongside, which is the wrong
+// answer to "would this service work".
+func ValidateEmbedding(e Embedding) error {
+	v := &validator{}
+	validateEmbedding(v, e)
+
+	if len(v.errs) == 0 {
+		return nil
+	}
+	return &ValidationError{Errors: v.errs}
+}
+
+func validateEmbedding(v *validator, e Embedding) {
+	v.positiveDuration("embedding.timeout", e.Timeout)
 
 	// An address is checked whenever there is one. It was typed for
 	// this purpose, so a mistake in it is reported while it is being
 	// made rather than at the moment the feature gets switched on.
-	if c.Embedding.URL != "" {
-		v.httpURL("embedding.url", c.Embedding.URL)
+	if e.URL != "" {
+		v.httpURL("embedding.url", e.URL)
 	}
 
-	if !c.Embedding.Enabled {
+	if !e.Enabled {
 		return
 	}
-	if c.Embedding.URL == "" {
+	if e.URL == "" {
 		v.add("embedding.url", "is empty but embedding is enabled")
 	}
-	if c.Embedding.Model == "" {
+	if e.Model == "" {
 		v.add("embedding.model", "is empty but embedding is enabled")
 	}
 }

@@ -5,6 +5,7 @@ import type {
   Config,
   ConfigResponse,
   ConfigWriteResponse,
+  EmbeddingTestResult,
   GatewayStatus,
   GatewayTools,
   UsageSnapshot,
@@ -44,6 +45,12 @@ export const endpoints = {
    *  they are edited rather than only on submission. */
   validateConfig: (config: Config) =>
     api.post<ValidationResponse>(`${BASE}/config/validate`, { config }),
+
+  /** Probes the embedding values as the form holds them, saved or not. A
+   *  stored key comes back as its placeholder and the server uses the
+   *  real one. */
+  testEmbedding: (embedding: { url: string; apiKey: string; model: string }) =>
+    api.post<EmbeddingTestResult>(`${BASE}/embedding/test`, { embedding }),
 
   // ===== servers =====
 

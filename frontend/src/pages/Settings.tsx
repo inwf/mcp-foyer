@@ -212,6 +212,58 @@ function SettingsSection({
   );
 }
 
+/** Tests the embedding values the form holds, saved or not.
+ *
+ *  The server does the asking, not this page: a stored key is one the
+ *  page never sees in clear, and a service this page could reach from a
+ *  browser is not necessarily one the backend can reach from where it
+ *  runs. */
+function EmbeddingProbe() {
+  const { t } = useTranslation();
+  const form = Form.useFormInstance<FormValues>();
+
+  const probe = useMutation({
+    mutationFn: () => {
+      const values = form.getFieldsValue();
+      return endpoints.testEmbedding({
+        url: values.embeddingURL.trim(),
+        apiKey: values.embeddingApiKey.trim(),
+        model: values.embeddingModel.trim(),
+      });
+    },
+  });
+
+  const failure = probe.isError
+    ? probe.error instanceof ApiError
+      ? probe.error.message
+      : t('error.unknown')
+    : null;
+  const result = probe.data;
+
+  return (
+    <div className={cx(styles.wide, styles.probe)}>
+      <Button onClick={() => probe.mutate()} loading={probe.isPending}>
+        {t('settings.embeddingTest')}
+      </Button>
+      {failure ? (
+        <span className={styles.probeFail}>
+          {t('settings.embeddingTestFailed', { error: failure })}
+        </span>
+      ) : null}
+      {result?.ok ? (
+        <span className={styles.probeOk}>
+          {t('settings.embeddingTestOk', { ms: result.latencyMs, dim: result.dimension })}
+        </span>
+      ) : null}
+      {result && !result.ok ? (
+        <span className={styles.probeFail}>
+          {t('settings.embeddingTestFailed', { error: result.error })}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function SettingsForm({
   config,
   onSave,
@@ -411,6 +463,7 @@ function SettingsForm({
               {/* 不遮成密码框：占位符是有含义的文本，需要被看见。 */}
               <Input className="mono" autoComplete="off" />
             </Form.Item>
+            <EmbeddingProbe />
           </div>
         </SettingsSection>
 

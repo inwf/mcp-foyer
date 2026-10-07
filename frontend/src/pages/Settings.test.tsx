@@ -333,3 +333,58 @@ describe('the session mode rules', () => {
     expect(explanation).toHaveTextContent('默认模式');
   });
 });
+
+/*
+ * The embedding probe.
+ *
+ * It asks the server, not the browser: a stored key is one this page
+ * never sees in clear, and a service this page could reach from a
+ * browser is not necessarily one the backend can reach from where it
+ * runs.
+ */
+describe('the embedding probe', () => {
+  const STORED = {
+    ...CONFIG,
+    embedding: {
+      enabled: true,
+      url: 'https://api.example.com/v1',
+      model: 'bge-m3',
+      timeout: '15s',
+    },
+  };
+
+  it('sends what the form holds and shows what came back', async () => {
+    const probed: { body?: { embedding: Record<string, unknown> } } = {};
+    api.use(
+      http.post('/api/embedding/test', async ({ request }) => {
+        probed.body = (await request.json()) as { embedding: Record<string, unknown> };
+        return HttpResponse.json({ ok: true, latencyMs: 42, dimension: 1024 });
+      }),
+    );
+    editing(STORED);
+
+    await screen.findByDisplayValue('https://api.example.com/v1');
+    await userEvent.click(screen.getByRole('button', { name: '测试' }));
+
+    await waitFor(() => expect(probed.body).toBeDefined());
+    expect(probed.body?.embedding).toMatchObject({
+      url: 'https://api.example.com/v1',
+      model: 'bge-m3',
+    });
+    expect(await screen.findByText(/1024 维/)).toBeInTheDocument();
+  });
+
+  it('shows the reason a probe failed', async () => {
+    api.use(
+      http.post('/api/embedding/test', () =>
+        HttpResponse.json({ ok: false, error: 'connection refused' }),
+      ),
+    );
+    editing(STORED);
+
+    await screen.findByDisplayValue('https://api.example.com/v1');
+    await userEvent.click(screen.getByRole('button', { name: '测试' }));
+
+    expect(await screen.findByText(/connection refused/)).toBeInTheDocument();
+  });
+});

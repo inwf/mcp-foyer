@@ -235,6 +235,10 @@ func (a *API) registerRoutes(api gin.IRoutes) {
 	api.POST("/config/validate", a.handleValidateConfig)
 	api.GET("/config/export", a.handleExportConfig)
 
+	// The embedding section, probed with the values a form holds — saved
+	// or not.
+	api.POST("/embedding/test", a.handleTestEmbedding)
+
 	// Servers, and what each one offers.
 	api.GET("/servers", a.handleListServers)
 	api.POST("/servers", a.handleCreateServer)

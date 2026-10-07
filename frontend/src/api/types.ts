@@ -110,6 +110,16 @@ export interface EmbeddingConfig {
   timeout: Duration;
 }
 
+/** What a probe of the embedding service found. Reaching the service is
+ *  the outcome being reported, so an unreachable one is a result with
+ *  `ok: false` rather than a failed request. */
+export interface EmbeddingTestResult {
+  ok: boolean;
+  latencyMs: number;
+  dimension: number;
+  error?: string;
+}
+
 /** The placeholder a hidden secret is handed out as. Sending it back
  *  unchanged means "leave this alone"; the server restores the real
  *  value. Anything else is taken as a new secret. */
