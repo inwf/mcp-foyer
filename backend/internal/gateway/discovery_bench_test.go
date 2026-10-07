@@ -19,7 +19,7 @@ import (
 // They include a Go SDK round trip over an in-memory transport. No real
 // child processes are started, so they say nothing about their RSS or boot time.
 func BenchmarkSearchDirectory(b *testing.B) {
-	for _, size := range []struct{ servers, tools int }{{20, 50}, {100, 50}, {100, 100}} {
+	for _, size := range []struct{ servers, tools int }{{20, 50}, {100, 50}, {100, 100}, {1000, 30}} {
 		b.Run(fmt.Sprintf("%dx%d", size.servers, size.tools), func(b *testing.B) {
 			for _, mode := range []struct {
 				name string

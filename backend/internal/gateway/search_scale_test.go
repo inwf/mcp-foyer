@@ -30,6 +30,7 @@ func TestSearchAtScaleKeepsTheIntendedToolInTheTopThree(t *testing.T) {
 		{"20x50", 20, 50},
 		{"100x50", 100, 50},
 		{"100x100", 100, 100},
+		{"1000x30", 1000, 30},
 	} {
 		t.Run(size.label, func(t *testing.T) {
 			candidates := slices.Concat(corpusCandidates(t), distractorCandidates(size.servers, size.tools))
@@ -83,20 +84,16 @@ var scaleMisses = map[string]struct {
 	reason string
 }{
 	"listChannels": {
-		sizes:  []string{"20x50", "100x50", "100x100"},
-		reason: "generated list_channels twins fold to the same terms; the corpus tool's extra slack and channels signals do not make up for its longer fields",
+		sizes:  []string{"20x50", "100x50", "100x100", "1000x30"},
+		reason: "the generated twins spell list_channels exactly while the corpus tool's server prefix keeps it off the joined form; at a thousand servers several twins clear it at once",
 	},
 	"list issues": {
 		sizes:  []string{"100x100"},
 		reason: "the generated twins spell list_issues exactly, so no join separates them; a length gap decides the page",
 	},
 	"knowledge graph search": {
-		sizes:  []string{"20x50", "100x50", "100x100"},
+		sizes:  []string{"20x50", "100x50", "100x100", "1000x30"},
 		reason: "memory's other tools concentrate knowledge and graph in short descriptions; search carries almost no weight once thousands of tools match it",
-	},
-	"how do I read a file": {
-		sizes:  []string{"100x50", "100x100"},
-		reason: "mostly function words; read and file are diluted and three shorter-field neighbours take the page",
 	},
 	"dryRun": {
 		sizes:  []string{"20x50"},
@@ -158,6 +155,14 @@ func distractorCandidates(servers, tools int) []gateway.Searchable {
 		kind := distractorKinds[i%len(distractorKinds)]
 		suffix := distractorSuffixes[(i/len(distractorKinds))%len(distractorSuffixes)]
 		name := kind + "-" + suffix
+		// Server names are unique keys in a real installation, so the
+		// hundred combinations above cycle with a round number instead of
+		// repeating: a thousand servers must not contain ten servers
+		// called docs-mcp, which would collide origins in a way no
+		// directory can.
+		if round := i / (len(distractorKinds) * len(distractorSuffixes)); round > 0 {
+			name = fmt.Sprintf("%s-%d", name, round)
+		}
 		for j := range tools {
 			template := distractorTemplates[j%len(distractorTemplates)]
 			noun := distractorNouns[(j/len(distractorTemplates)+i)%len(distractorNouns)]
