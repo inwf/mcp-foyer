@@ -66,6 +66,12 @@ func (a *API) handlePutConfig(c *gin.Context) {
 func restoreSecrets(incoming, current config.Config) config.Config {
 	out := incoming.Clone()
 
+	// The embedding key is a top-level secret, unlike the per-server
+	// credentials the loop below walks.
+	if out.Embedding.APIKey == config.RedactedValue {
+		out.Embedding.APIKey = current.Embedding.APIKey
+	}
+
 	for name, server := range out.MCPServers {
 		existing, known := current.MCPServers[name]
 		if !known {

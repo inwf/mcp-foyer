@@ -60,6 +60,11 @@ type Config struct {
 	Gateway  Gateway  `yaml:"gateway"`
 	Startup  Startup  `yaml:"startup"`
 
+	// Embedding configures the optional embedding service that lets
+	// search rank tools by meaning as well as by words. It is off by
+	// default, and while it is off nothing described here is contacted.
+	Embedding Embedding `yaml:"embedding"`
+
 	// MCPServers holds the upstream servers, keyed by the name they are
 	// known by throughout the API, the web UI and the aggregated tool
 	// names. The key "mcpServers" matches the convention used by other
@@ -205,6 +210,39 @@ type Startup struct {
 	// RetryBackoff is the base delay for exponential backoff between
 	// connection attempts.
 	RetryBackoff time.Duration `yaml:"retryBackoff"`
+}
+
+// Embedding configures an optional embedding service that lets search
+// rank tools by meaning in addition to matching words. Everything about
+// it is off by default: while it is off, search behaves exactly as it
+// did before this section existed.
+//
+// The service is expected to speak the OpenAI embeddings API, which
+// most providers and local runners do.
+type Embedding struct {
+	// Enabled turns semantic ranking on. The service has to be
+	// reachable and the tool index built before it affects results;
+	// failures fall back to word matching on their own.
+	Enabled bool `yaml:"enabled"`
+
+	// URL is the base address of the service. The /v1/embeddings path
+	// is appended unless the URL already ends in /embeddings.
+	URL string `yaml:"url,omitempty"`
+
+	// APIKey is sent as a bearer token. It may be empty, because a
+	// service on the same machine usually does not want one.
+	APIKey string `yaml:"apiKey,omitempty"`
+
+	// Model names the embedding model. It has to read every language
+	// the directory is written in: a query and the text it matches are
+	// rarely in the same words, and never in the same language by
+	// construction.
+	Model string `yaml:"model,omitempty"`
+
+	// Timeout bounds one embedding request. A batch of tool texts takes
+	// longer than a single query, so this is the per-request cap rather
+	// than a budget for a whole index build.
+	Timeout time.Duration `yaml:"timeout"`
 }
 
 // MCPServer is one upstream MCP server. Which fields apply depends on

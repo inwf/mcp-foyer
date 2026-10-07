@@ -58,6 +58,12 @@ func IsSecretKey(name string) bool {
 func (c Config) Redact() Config {
 	out := c.Clone()
 
+	// The embedding key sits at the top level rather than inside a
+	// server, so it needs its own line here.
+	if out.Embedding.APIKey != "" {
+		out.Embedding.APIKey = RedactedValue
+	}
+
 	if out.MCPServers != nil {
 		for name, server := range out.MCPServers {
 			out.MCPServers[name] = server.Redact()

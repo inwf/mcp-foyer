@@ -68,6 +68,16 @@ func Default() Config {
 			RetryBackoff: 5 * time.Second,
 		},
 
+		Embedding: Embedding{
+			// Off and unaddressed: nothing is sent anywhere until
+			// someone fills in an address and turns it on.
+			Enabled: false,
+			// Long enough for a batch of tool texts from a service that
+			// is answering, short enough that a dead one is noticed
+			// rather than waited on.
+			Timeout: 15 * time.Second,
+		},
+
 		MCPServers: map[string]MCPServer{},
 	}
 }

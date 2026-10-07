@@ -71,6 +71,12 @@ interface FormValues {
   connectDelay: string;
   maxRetries: number;
   retryBackoff: string;
+  embeddingEnabled: boolean;
+  embeddingURL: string;
+  /** As the server handed it out: the placeholder when a key is stored,
+   *  an empty string when there is none, or whatever was just typed. */
+  embeddingApiKey: string;
+  embeddingModel: string;
 }
 
 function valuesFrom(config: Config): FormValues {
@@ -101,6 +107,10 @@ function valuesFrom(config: Config): FormValues {
     connectDelay: config.startup.connectDelay,
     maxRetries: config.startup.maxRetries,
     retryBackoff: config.startup.retryBackoff,
+    embeddingEnabled: config.embedding.enabled,
+    embeddingURL: config.embedding.url ?? '',
+    embeddingApiKey: config.embedding.apiKey ?? '',
+    embeddingModel: config.embedding.model ?? '',
   };
 }
 
@@ -154,6 +164,16 @@ function applyTo(config: Config, values: FormValues): Config {
       connectDelay: values.connectDelay.trim(),
       maxRetries: values.maxRetries,
       retryBackoff: values.retryBackoff.trim(),
+    },
+    embedding: {
+      ...config.embedding,
+      enabled: values.embeddingEnabled,
+      url: values.embeddingURL.trim(),
+      // Sent back verbatim. The placeholder means "keep the stored key"
+      // and the server restores it; an empty string clears the key; and
+      // anything else is a key someone just typed.
+      apiKey: values.embeddingApiKey.trim(),
+      model: values.embeddingModel.trim(),
     },
   };
 }
@@ -354,6 +374,42 @@ function SettingsForm({
             </Form.Item>
             <Form.Item name="retryBackoff" label={t('settings.retryBackoff')}>
               <Input className="mono" />
+            </Form.Item>
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.embedding')} hint={t('settings.embeddingHint')}>
+          <div className={styles.grid}>
+            <Form.Item
+              name="embeddingEnabled"
+              label={t('settings.embeddingEnabled')}
+              valuePropName="checked"
+              className={cx(styles.wide)}
+            >
+              <Switch />
+            </Form.Item>
+            <Form.Item
+              name="embeddingURL"
+              label={t('settings.embeddingURL')}
+              extra={t('settings.embeddingURLHint')}
+              className={cx(styles.wide)}
+            >
+              <Input className="mono" placeholder="https://api.example.com/v1" />
+            </Form.Item>
+            <Form.Item
+              name="embeddingModel"
+              label={t('settings.embeddingModel')}
+              extra={t('settings.embeddingModelHint')}
+            >
+              <Input className="mono" placeholder="bge-m3" />
+            </Form.Item>
+            <Form.Item
+              name="embeddingApiKey"
+              label={t('settings.embeddingApiKey')}
+              extra={t('settings.embeddingApiKeyHint')}
+            >
+              {/* 不遮成密码框：占位符是有含义的文本，需要被看见。 */}
+              <Input className="mono" autoComplete="off" />
             </Form.Item>
           </div>
         </SettingsSection>

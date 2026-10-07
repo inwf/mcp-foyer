@@ -123,6 +123,19 @@ func TestValidateTopLevelRules(t *testing.T) {
 		{"negative connectDelay", func(c *config.Config) {
 			c.Startup.ConnectDelay = -time.Second
 		}, "startup.connectDelay"},
+
+		{"zero embedding timeout", func(c *config.Config) { c.Embedding.Timeout = 0 }, "embedding.timeout"},
+		{"embedding url that is not http", func(c *config.Config) {
+			c.Embedding.URL = "ftp://example.com/v1"
+		}, "embedding.url"},
+		{"embedding enabled without an address", func(c *config.Config) {
+			c.Embedding.Enabled = true
+			c.Embedding.Model = "bge-m3"
+		}, "embedding.url"},
+		{"embedding enabled without a model", func(c *config.Config) {
+			c.Embedding.Enabled = true
+			c.Embedding.URL = "https://api.example.com/v1"
+		}, "embedding.model"},
 	}
 
 	for _, tt := range tests {
@@ -174,6 +187,18 @@ func TestValidateAcceptsMeaningfulEdgeValues(t *testing.T) {
 				Transport: config.TransportStdio, Command: "npx", Timeout: time.Minute,
 				ExposedTools: []string{"read"}, DisabledTools: []string{"write", "gone"},
 			}}
+		}},
+		// Filling the address in before switching the feature on is the
+		// order a careful person does it in, and a service on the same
+		// machine usually wants no key at all.
+		{"embedding configured but still off", func(c *config.Config) {
+			c.Embedding.URL = "https://api.example.com/v1"
+			c.Embedding.Model = "bge-m3"
+		}},
+		{"embedding switched on without a key", func(c *config.Config) {
+			c.Embedding.Enabled = true
+			c.Embedding.URL = "https://api.example.com/v1"
+			c.Embedding.Model = "bge-m3"
 		}},
 	}
 

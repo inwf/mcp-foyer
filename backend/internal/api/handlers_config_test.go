@@ -404,3 +404,58 @@ func TestExportingSecretsIsLogged(t *testing.T) {
 		t.Errorf("exporting the secrets was not logged:\n%s", logText(h.Logs))
 	}
 }
+
+// The embedding key is a top-level secret, so it needs the same
+// round-trip protection as a server's credentials: reading the
+// configuration must not hand it out, and sending the placeholder back
+// must not destroy it.
+func TestSavingBackARedactedEmbeddingKeyKeepsIt(t *testing.T) {
+	h := start(t, func(o *api.Options) {
+		o.Configs = configs(t, func(cfg *config.Config) {
+			cfg.Embedding.Enabled = true
+			cfg.Embedding.URL = "https://api.example.com/v1"
+			cfg.Embedding.Model = "bge-m3"
+			cfg.Embedding.APIKey = "sk-embed-live"
+		})
+	})
+
+	var read configResponse
+	decode(t, h.get(t, "/api/config"), http.StatusOK, &read)
+	if got := configFromWire(t, read.Config).Embedding.APIKey; got != config.RedactedValue {
+		t.Fatalf("apiKey = %q, want it hidden", got)
+	}
+
+	edited := configFromWire(t, read.Config)
+	edited.Logging.Level = config.LevelWarn
+	decode(t, h.do(t, http.MethodPut, "/api/config", map[string]any{"config": toWire(t, edited)}),
+		http.StatusOK, nil)
+
+	stored := h.Configs.Get()
+	if got := stored.Embedding.APIKey; got != "sk-embed-live" {
+		t.Errorf("apiKey = %q, want the original key to survive", got)
+	}
+	if !stored.Embedding.Enabled || stored.Embedding.Model != "bge-m3" {
+		t.Errorf("the embedding settings were dropped by the round trip: %+v", stored.Embedding)
+	}
+}
+
+// A rotated embedding key has to replace the old one.
+func TestANewEmbeddingKeyReplacesTheOldOne(t *testing.T) {
+	h := start(t, func(o *api.Options) {
+		o.Configs = configs(t, func(cfg *config.Config) {
+			cfg.Embedding.APIKey = "sk-old"
+		})
+	})
+
+	var read configResponse
+	decode(t, h.get(t, "/api/config"), http.StatusOK, &read)
+
+	edited := configFromWire(t, read.Config)
+	edited.Embedding.APIKey = "sk-new"
+	decode(t, h.do(t, http.MethodPut, "/api/config", map[string]any{"config": toWire(t, edited)}),
+		http.StatusOK, nil)
+
+	if got := h.Configs.Get().Embedding.APIKey; got != "sk-new" {
+		t.Errorf("apiKey = %q, want the new key", got)
+	}
+}

@@ -349,6 +349,17 @@ export const zh = {
     connectDelay: '连接错开延迟',
     maxRetries: '最大重试次数',
     retryBackoff: '重试退避',
+    embedding: '嵌入模型',
+    embeddingHint:
+      '可选：连一个 OpenAI 兼容的嵌入服务，让搜索结果按语义排序。默认关闭；' +
+      '开启后先用字面匹配，向量索引建好后叠加语义排序，服务不可用时自动退回字面匹配。',
+    embeddingEnabled: '使用嵌入模型',
+    embeddingURL: '服务地址',
+    embeddingURLHint: '基地址，自动拼 /v1/embeddings；已以 /embeddings 结尾则原样使用',
+    embeddingModel: '模型名',
+    embeddingModelHint: '要能读目录使用的所有语言',
+    embeddingApiKey: 'API key',
+    embeddingApiKeyHint: '服务不需要 key 可以留空；显示 [redacted] 表示保持已保存的 key 不变',
     saved: '配置已保存',
     restartNeeded: '监听地址的改动需要重启 mcp-foyer 才会生效',
     invalidYaml: 'YAML 无法解析',

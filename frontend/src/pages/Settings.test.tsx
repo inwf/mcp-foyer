@@ -55,6 +55,9 @@ const CONFIG = {
     keepAliveFailureThreshold: 3,
   },
   startup: { connectDelay: '0s', maxRetries: 3, retryBackoff: '2s' },
+  // The shape the backend sends: `enabled` and `timeout` are always
+  // there, the rest appear only once they have a value.
+  embedding: { enabled: false, timeout: '15s' },
   mcpServers: {},
 };
 
@@ -176,6 +179,81 @@ describe('the settings form', () => {
 
     await waitFor(() => expect(saved.body).toBeDefined());
     expect(saved.body?.config).toMatchObject({ gateway: { somethingNewer: 'kept' } });
+  });
+
+  it('keeps an embedding setting the form does not show', async () => {
+    const saved = editing({
+      ...CONFIG,
+      embedding: { enabled: false, timeout: '15s', somethingNewer: 'kept' },
+    });
+
+    await userEvent.click(await screen.findByRole('switch', { name: /记录 API 细节/ }));
+    await save();
+
+    await waitFor(() => expect(saved.body).toBeDefined());
+    expect(saved.body?.config).toMatchObject({
+      embedding: { timeout: '15s', somethingNewer: 'kept' },
+    });
+  });
+
+  it('shows the embedding settings and sends them back', async () => {
+    const saved = editing({
+      ...CONFIG,
+      embedding: {
+        enabled: true,
+        url: 'https://api.example.com/v1',
+        model: 'bge-m3',
+        timeout: '15s',
+      },
+    });
+
+    expect(await screen.findByDisplayValue('https://api.example.com/v1')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('bge-m3')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /使用嵌入模型/ })).toBeChecked();
+
+    await save();
+
+    await waitFor(() => expect(saved.body).toBeDefined());
+    expect(saved.body?.config).toMatchObject({
+      embedding: {
+        enabled: true,
+        url: 'https://api.example.com/v1',
+        model: 'bge-m3',
+        timeout: '15s',
+      },
+    });
+  });
+
+  it('turns the embedding model on', async () => {
+    const saved = editing();
+
+    await userEvent.click(await screen.findByRole('switch', { name: /使用嵌入模型/ }));
+    await save();
+
+    await waitFor(() => expect(saved.body).toBeDefined());
+    expect(saved.body?.config).toMatchObject({ embedding: { enabled: true } });
+  });
+
+  // A stored key reaches the form as its placeholder and goes back the
+  // same way. That spelling means "keep it", so the form must not turn
+  // it into a new key by touching it.
+  it('sends a stored key back as the placeholder', async () => {
+    const saved = editing({
+      ...CONFIG,
+      embedding: {
+        enabled: true,
+        url: 'https://api.example.com/v1',
+        model: 'bge-m3',
+        apiKey: '[redacted]',
+        timeout: '15s',
+      },
+    });
+
+    expect(await screen.findByDisplayValue('[redacted]')).toBeInTheDocument();
+    await save();
+
+    await waitFor(() => expect(saved.body).toBeDefined());
+    expect(saved.body?.config).toMatchObject({ embedding: { apiKey: '[redacted]' } });
   });
 });
 

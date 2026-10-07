@@ -30,6 +30,13 @@ func populated() config.Config {
 	c.Gateway.SessionModeRules.Stateful = []string{"ClientA"}
 	c.Gateway.SessionModeRules.Stateless = []string{"ClientB", "ClientC"}
 	c.Startup.MaxRetries = 9
+	c.Embedding = config.Embedding{
+		Enabled: true,
+		URL:     "https://api.example.com/v1",
+		APIKey:  "sk-embed-live",
+		Model:   "bge-m3",
+		Timeout: 20 * time.Second,
+	}
 	c.MCPServers = map[string]config.MCPServer{
 		"files": {
 			Transport:   config.TransportStdio,

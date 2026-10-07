@@ -89,7 +89,25 @@ export interface Config {
     maxRetries: number;
     retryBackoff: Duration;
   };
+  /** Optional semantic search through an OpenAI-compatible embedding
+   *  service. Off by default; while it is off, search behaves exactly as
+   *  it did before this section existed. */
+  embedding: EmbeddingConfig;
   mcpServers: Record<string, MCPServer>;
+}
+
+export interface EmbeddingConfig {
+  /** Whether search also ranks by meaning. The service has to be
+   *  reachable and the index built before it changes any result. */
+  enabled: boolean;
+  /** Base address of the service. The `/v1/embeddings` path is appended
+   *  unless the URL already ends in `/embeddings`. */
+  url?: string;
+  /** Sent as a bearer token. Absent when the service wants none. */
+  apiKey?: string;
+  /** The model name. It has to read every language the directory uses. */
+  model?: string;
+  timeout: Duration;
 }
 
 /** The placeholder a hidden secret is handed out as. Sending it back

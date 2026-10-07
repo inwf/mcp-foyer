@@ -70,6 +70,7 @@ func (c Config) Validate() error {
 	c.validateSecurity(v)
 	c.validateGateway(v)
 	c.validateStartup(v)
+	c.validateEmbedding(v)
 	c.validateMCPServers(v)
 
 	if len(v.errs) == 0 {
@@ -189,6 +190,27 @@ func (c Config) validateStartup(v *validator) {
 	v.nonNegativeDuration("startup.connectDelay", c.Startup.ConnectDelay)
 	v.nonNegativeInt("startup.maxRetries", c.Startup.MaxRetries)
 	v.positiveDuration("startup.retryBackoff", c.Startup.RetryBackoff)
+}
+
+func (c Config) validateEmbedding(v *validator) {
+	v.positiveDuration("embedding.timeout", c.Embedding.Timeout)
+
+	// An address is checked whenever there is one. It was typed for
+	// this purpose, so a mistake in it is reported while it is being
+	// made rather than at the moment the feature gets switched on.
+	if c.Embedding.URL != "" {
+		v.httpURL("embedding.url", c.Embedding.URL)
+	}
+
+	if !c.Embedding.Enabled {
+		return
+	}
+	if c.Embedding.URL == "" {
+		v.add("embedding.url", "is empty but embedding is enabled")
+	}
+	if c.Embedding.Model == "" {
+		v.add("embedding.model", "is empty but embedding is enabled")
+	}
 }
 
 func (c Config) validateMCPServers(v *validator) {

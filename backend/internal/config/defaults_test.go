@@ -80,6 +80,7 @@ func TestDefaultDurationsArePositive(t *testing.T) {
 		{"gateway.keepAlive", c.Gateway.KeepAlive},
 		{"startup.connectDelay", c.Startup.ConnectDelay},
 		{"startup.retryBackoff", c.Startup.RetryBackoff},
+		{"embedding.timeout", c.Embedding.Timeout},
 	}
 
 	for _, d := range durations {
@@ -137,6 +138,19 @@ func TestDefaultHasNoUpstreamsButIsWritable(t *testing.T) {
 
 // Maps and slices are reference types, so a shared backing array would
 // let one caller's edit leak into every other caller's configuration.
+// The embedding section reaches a service over the network, so it stays
+// off and unaddressed until someone fills it in on purpose.
+func TestDefaultEmbeddingIsOff(t *testing.T) {
+	c := config.Default()
+
+	if c.Embedding.Enabled {
+		t.Error("embedding is on by default; it should be opt-in")
+	}
+	if c.Embedding.URL != "" || c.Embedding.APIKey != "" || c.Embedding.Model != "" {
+		t.Errorf("embedding defaults carry an address or credentials: %+v", c.Embedding)
+	}
+}
+
 func TestDefaultReturnsIndependentValues(t *testing.T) {
 	a := config.Default()
 	b := config.Default()

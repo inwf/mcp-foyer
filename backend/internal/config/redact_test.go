@@ -253,3 +253,28 @@ func TestRedactLeavesUnparseableURLsAlone(t *testing.T) {
 		t.Errorf("url = %q, want it left as written", got)
 	}
 }
+
+// The embedding key is a top-level secret rather than a server's, so it
+// needs its own pass through the same treatment.
+func TestRedactHidesTheEmbeddingKey(t *testing.T) {
+	cfg := config.Default()
+	cfg.Embedding.APIKey = "sk-embed-live"
+
+	if got := cfg.Redact().Embedding.APIKey; got != config.RedactedValue {
+		t.Errorf("apiKey = %q, want it hidden", got)
+	}
+	if cfg.Embedding.APIKey != "sk-embed-live" {
+		t.Errorf("the original apiKey became %q", cfg.Embedding.APIKey)
+	}
+}
+
+// An empty key stays empty. Marking it would make the settings form send
+// back a value that is not a key at all, and the form has no way to tell
+// that apart from a key someone typed.
+func TestRedactLeavesAnEmptyEmbeddingKeyEmpty(t *testing.T) {
+	cfg := config.Default()
+
+	if got := cfg.Redact().Embedding.APIKey; got != "" {
+		t.Errorf("apiKey = %q, want it left empty", got)
+	}
+}
