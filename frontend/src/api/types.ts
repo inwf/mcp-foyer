@@ -139,6 +139,27 @@ export interface EmbeddingStatus {
   lastDone?: number;
 }
 
+/** One hit of the embedding preview, shaped like a search hit. */
+export interface EmbeddingPreviewHit {
+  server: string;
+  tool: string;
+  exposed?: string;
+  description?: string;
+  matched: number;
+  score: number;
+}
+
+/** One query ranked both ways: what the words found, and what the words
+ *  and the meaning found together. */
+export interface EmbeddingPreview {
+  enabled: boolean;
+  model?: string;
+  literal: EmbeddingPreviewHit[];
+  fused: EmbeddingPreviewHit[];
+  /** Query words that matched no tool at all. */
+  unmatched?: string[];
+}
+
 /** The placeholder a hidden secret is handed out as. Sending it back
  *  unchanged means "leave this alone"; the server restores the real
  *  value. Anything else is taken as a new secret. */

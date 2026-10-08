@@ -17,7 +17,7 @@ import { parse, stringify } from 'yaml';
 import { endpoints } from '@/api/endpoints';
 import { keys } from '@/api/query';
 import { ApiError } from '@/api/client';
-import { LOG_LEVELS, type Config, type FieldError } from '@/api/types';
+import { LOG_LEVELS, type Config, type EmbeddingPreviewHit, type FieldError } from '@/api/types';
 import { PageHeading } from '@/components/PageHeading';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { StringListEditor } from '@/components/KeyValueEditor';
@@ -299,6 +299,94 @@ function EmbeddingIndexStatus() {
   );
 }
 
+/** One query ranked both ways, side by side.
+ *
+ *  The similarity floor has no universal value — a cosine is a property
+ *  of the model — so the way to choose it is to look at what it does to
+ *  the directory in front of you. */
+function EmbeddingPreviewBox() {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const preview = useMutation({
+    mutationFn: (text: string) => endpoints.previewEmbedding(text),
+  });
+
+  const run = () => {
+    const text = query.trim();
+    if (text) preview.mutate(text);
+  };
+
+  return (
+    <div className={cx(styles.wide, styles.preview)}>
+      <div className={styles.previewQuery}>
+        <Input
+          className="mono"
+          value={query}
+          placeholder={t('settings.embeddingPreviewPlaceholder')}
+          onChange={(event) => setQuery(event.target.value)}
+          onPressEnter={run}
+        />
+        <Button onClick={run} loading={preview.isPending} disabled={!query.trim()}>
+          {t('settings.embeddingPreview')}
+        </Button>
+      </div>
+
+      {preview.isError ? (
+        <span className={styles.probeFail}>
+          {t('settings.embeddingPreviewFailed', {
+            error: preview.error instanceof ApiError ? preview.error.message : t('error.unknown'),
+          })}
+        </span>
+      ) : null}
+
+      {preview.data ? (
+        <>
+          {!preview.data.enabled ? (
+            <p className={styles.note}>{t('settings.embeddingPreviewOff')}</p>
+          ) : null}
+          <div className={styles.previewColumns}>
+            <PreviewList title={t('settings.embeddingPreviewLiteral')} hits={preview.data.literal} />
+            <PreviewList title={t('settings.embeddingPreviewFused')} hits={preview.data.fused} />
+          </div>
+          {preview.data.unmatched?.length ? (
+            <span className={styles.probeFail}>
+              {t('settings.embeddingPreviewUnmatched', {
+                words: preview.data.unmatched.join('、'),
+              })}
+            </span>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/** One column of the preview. */
+function PreviewList({ title, hits }: { title: string; hits: EmbeddingPreviewHit[] }) {
+  const { t } = useTranslation();
+  return (
+    <div className={styles.previewColumn}>
+      <h4>{title}</h4>
+      {hits.length === 0 ? (
+        <span className={styles.indexCount}>{t('common.none')}</span>
+      ) : (
+        <ol className={styles.previewHits}>
+          {hits.map((hit) => (
+            <li key={`${hit.server}/${hit.tool}`}>
+              <span className="mono">
+                {hit.server}/{hit.tool}
+              </span>
+              <span className={styles.indexCount}>
+                {t('settings.embeddingPreviewScore', { matched: hit.matched, score: hit.score })}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 function SettingsForm({
   config,
   onSave,
@@ -500,6 +588,7 @@ function SettingsForm({
             </Form.Item>
             <EmbeddingProbe />
             <EmbeddingIndexStatus />
+            <EmbeddingPreviewBox />
           </div>
         </SettingsSection>
 

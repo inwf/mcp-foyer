@@ -78,9 +78,11 @@ type Options struct {
 	// nothing, which is what a test of the routing layer alone wants.
 	Bus *events.Bus
 
-	// Semantic reports the state of the embedding index. A nil one leaves
-	// the status endpoint reporting only what the configuration says.
-	Semantic StatusSource
+	// Semantic is the embedding index: its state for the status endpoint,
+	// and its ranking for the preview. A nil one leaves the status
+	// endpoint reporting only what the configuration says, and the preview
+	// showing the lexical order twice.
+	Semantic Semantic
 
 	// WebUI holds the built frontend. A nil file system, or one with no
 	// entry document, leaves paths outside the API reporting that no web
@@ -245,6 +247,9 @@ func (a *API) registerRoutes(api gin.IRoutes) {
 
 	// How far the embedding index has got.
 	api.GET("/embedding/status", a.handleEmbeddingStatus)
+
+	// One query ranked both ways, which is how the floor gets chosen.
+	api.POST("/embedding/preview", a.handleEmbeddingPreview)
 
 	// Servers, and what each one offers.
 	api.GET("/servers", a.handleListServers)

@@ -449,3 +449,51 @@ describe('the embedding index status', () => {
     expect(screen.queryByText(/已建索引/)).not.toBeInTheDocument();
   });
 });
+
+/*
+ * The preview.
+ *
+ * One query ranked both ways, which is how the similarity floor gets
+ * chosen: the page cannot pick a value for the model, so it shows what
+ * the current one does to this directory.
+ */
+describe('the embedding preview', () => {
+  const STORED = {
+    ...CONFIG,
+    embedding: {
+      enabled: true,
+      url: 'https://api.example.com/v1',
+      model: 'bge-m3',
+      timeout: '15s',
+      minSimilarity: 0.35,
+    },
+  };
+
+  it('asks for one query and shows both rankings', async () => {
+    const asked: { body?: { query?: string } } = {};
+    api.use(
+      http.post('/api/embedding/preview', async ({ request }) => {
+        asked.body = (await request.json()) as { query?: string };
+        return HttpResponse.json({
+          enabled: true,
+          model: 'bge-m3',
+          literal: [{ server: 'issues', tool: 'list_issues', matched: 2, score: 1200 }],
+          fused: [
+            { server: 'issues', tool: 'list_issues', matched: 2, score: 32000 },
+            { server: 'jira', tool: 'list_tickets', matched: 0, score: 16667 },
+          ],
+        });
+      }),
+    );
+    editing(STORED);
+
+    const box = await screen.findByPlaceholderText(/输入一条查询/);
+    await userEvent.type(box, 'bug tracking');
+    await userEvent.click(screen.getByRole('button', { name: '预览' }));
+
+    await waitFor(() => expect(asked.body).toBeDefined());
+    expect(asked.body?.query).toBe('bug tracking');
+    // The tool only the meaning found sits in the fused column.
+    expect(await screen.findByText('jira/list_tickets')).toBeInTheDocument();
+  });
+});

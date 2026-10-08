@@ -87,3 +87,73 @@ func TestBrowsingDoesNotAskTheSemanticRanking(t *testing.T) {
 		t.Errorf("queried = %v, want nothing asked while browsing", sem.queried)
 	}
 }
+
+// Searchables is the list search_tools ranks, built once and shared with
+// the preview: the handshake name and the configured description
+// included, parameter prose flattened in.
+func TestSearchablesCarriesWhatSearchMatches(t *testing.T) {
+	ups := &fakeUpstreams{
+		statuses: []upstream.Status{
+			{Name: "files", State: upstream.StateConnected, ServerName: "Filesystem", ToolCount: 2},
+		},
+		tools: map[string][]*mcp.Tool{"files": {
+			{Name: "read", Description: "read a file", InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"path": map[string]any{"type": "string", "description": "the file to read"},
+				},
+			}},
+			{Name: "write", Description: "write a file"},
+		}},
+	}
+	cfgs := configFixture(t, map[string]config.MCPServer{
+		"files": {
+			Transport: config.TransportStdio, Command: "echo", Timeout: time.Minute,
+			Description: "the team's files",
+		},
+	})
+
+	got := gateway.Searchables(ups, cfgs, "")
+
+	if len(got) != 2 {
+		t.Fatalf("candidates = %d, want one per usable tool", len(got))
+	}
+	read := got[0]
+	if read.Server != "files" || read.Tool != "read" {
+		t.Fatalf("first candidate = %s/%s, want files/read", read.Server, read.Tool)
+	}
+	if read.ServerTitle != "Filesystem" || read.ServerDescription != "the team's files" {
+		t.Errorf("candidate carries %q/%q, want the handshake name and the configured description",
+			read.ServerTitle, read.ServerDescription)
+	}
+	if read.Arguments == "" {
+		t.Error("candidate carries no parameter text")
+	}
+	// Nothing is exposed in this fixture, which is the default of the
+	// whole design: a model reaches these tools by searching.
+	if read.Exposed != "" {
+		t.Errorf("exposed = %q, want empty", read.Exposed)
+	}
+}
+
+// A disabled tool is not there to be found, by a search or by a preview.
+func TestSearchablesLeavesDisabledToolsOut(t *testing.T) {
+	ups := &fakeUpstreams{
+		statuses: []upstream.Status{{Name: "files", State: upstream.StateConnected, ToolCount: 2}},
+		tools: map[string][]*mcp.Tool{"files": {
+			{Name: "read", Description: "read a file"},
+			{Name: "write", Description: "write a file"},
+		}},
+	}
+	cfgs := configFixture(t, map[string]config.MCPServer{
+		"files": {
+			Transport: config.TransportStdio, Command: "echo", Timeout: time.Minute,
+			DisabledTools: []string{"write"},
+		},
+	})
+
+	got := gateway.Searchables(ups, cfgs, "")
+	if len(got) != 1 || got[0].Tool != "read" {
+		t.Errorf("candidates = %+v, want only the usable tool", got)
+	}
+}

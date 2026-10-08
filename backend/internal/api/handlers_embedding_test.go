@@ -1,8 +1,10 @@
 package api_test
 
 import (
+	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,7 +13,11 @@ import (
 
 	"mcp-foyer/internal/api"
 	"mcp-foyer/internal/config"
+	"mcp-foyer/internal/events"
+	"mcp-foyer/internal/gateway"
+	"mcp-foyer/internal/logging"
 	"mcp-foyer/internal/semantic"
+	"mcp-foyer/internal/upstream"
 )
 
 // fakeEmbedding stands in for an OpenAI-compatible service and records
@@ -184,19 +190,30 @@ func TestAProbeWithAMalformedBodyIsABadRequest(t *testing.T) {
 	}
 }
 
-// stubStatus is an index standing in for the real one, so that what is
+// stubSemantic is an index standing in for the real one, so that what is
 // under test is the endpoint and not the indexer.
-type stubStatus struct{}
+type stubSemantic struct {
+	status       semantic.Status
+	similarities []float32
+	queried      []string
+}
 
-func (stubStatus) Status() semantic.Status {
-	return semantic.Status{
-		Enabled: true, Model: "bge-m3", Dimension: 8,
-		Indexed: 3, Total: 10, Building: true, LastError: "the service is down",
-	}
+func (s *stubSemantic) Status() semantic.Status { return s.status }
+
+func (s *stubSemantic) Similarities(_ context.Context, query string, candidates []gateway.Searchable) []float32 {
+	s.queried = append(s.queried, query)
+	out := make([]float32, len(candidates))
+	copy(out, s.similarities)
+	return out
 }
 
 func TestTheEmbeddingStatusComesFromTheIndex(t *testing.T) {
-	h := start(t, func(o *api.Options) { o.Semantic = stubStatus{} })
+	h := start(t, func(o *api.Options) {
+		o.Semantic = &stubSemantic{status: semantic.Status{
+			Enabled: true, Model: "bge-m3", Dimension: 8,
+			Indexed: 3, Total: 10, Building: true, LastError: "the service is down",
+		}}
+	})
 
 	var got struct {
 		Enabled   bool   `json:"enabled"`
@@ -241,5 +258,95 @@ func TestTheEmbeddingStatusWithoutAnIndexSaysWhatTheConfigurationSays(t *testing
 	}
 	if got.Indexed != 0 {
 		t.Errorf("indexed = %d, want 0", got.Indexed)
+	}
+}
+
+// emptyUpstreams is a connection manager with no servers connected: the
+// preview has nothing to rank, which is all a routing test needs.
+func emptyUpstreams(t *testing.T) *upstream.Manager {
+	t.Helper()
+
+	store := logging.NewStore(50)
+	log, err := logging.New(logging.Options{Level: slog.LevelError, Store: store})
+	if err != nil {
+		t.Fatalf("build the logger: %v", err)
+	}
+	t.Cleanup(func() { log.Close() })
+
+	bus := events.NewBus()
+	t.Cleanup(bus.Close)
+	return upstream.NewManager("test", log, bus)
+}
+
+// The preview ranks one query both ways. An empty directory ranks
+// nothing, but the query still reaches the ranking — which is what says
+// the page goes through the same entry point a search does.
+func TestThePreviewRanksOneQueryBothWays(t *testing.T) {
+	sem := &stubSemantic{status: semantic.Status{Enabled: true, Model: "bge-m3"}}
+	h := start(t, func(o *api.Options) {
+		o.Upstreams = emptyUpstreams(t)
+		o.Semantic = sem
+		o.Configs = configs(t, func(cfg *config.Config) {
+			cfg.Embedding.Enabled = true
+			cfg.Embedding.URL = "https://api.example.com/v1"
+			cfg.Embedding.Model = "bge-m3"
+		})
+	})
+
+	var got struct {
+		Enabled   bool     `json:"enabled"`
+		Model     string   `json:"model"`
+		Literal   []any    `json:"literal"`
+		Fused     []any    `json:"fused"`
+		Unmatched []string `json:"unmatched"`
+	}
+	decode(t, h.do(t, http.MethodPost, "/api/embedding/preview", map[string]any{"query": "bug tracker"}),
+		http.StatusOK, &got)
+
+	if !got.Enabled {
+		t.Error("enabled = false, want what the configuration says")
+	}
+	if got.Model != "bge-m3" {
+		t.Errorf("model = %q, want the index's own model", got.Model)
+	}
+	if len(sem.queried) != 1 || sem.queried[0] != "bug tracker" {
+		t.Errorf("queried = %v, want the preview's own words", sem.queried)
+	}
+	if len(got.Unmatched) != 2 {
+		t.Errorf("unmatched = %v, want both words named", got.Unmatched)
+	}
+}
+
+// Without an index the two halves are the same list, and the answer says
+// so — the page has to know whether it is showing a difference at all.
+func TestAPreviewWithoutAnIndexShowsTheLexicalOrderTwice(t *testing.T) {
+	h := start(t, func(o *api.Options) { o.Upstreams = emptyUpstreams(t) })
+
+	var got struct {
+		Enabled bool `json:"enabled"`
+	}
+	decode(t, h.do(t, http.MethodPost, "/api/embedding/preview", map[string]any{"query": "bug tracker"}),
+		http.StatusOK, &got)
+
+	if got.Enabled {
+		t.Error("enabled = true without an index")
+	}
+}
+
+func TestAPreviewWithoutAQueryIsRefused(t *testing.T) {
+	h := start(t, func(o *api.Options) { o.Upstreams = emptyUpstreams(t) })
+
+	resp := h.do(t, http.MethodPost, "/api/embedding/preview", map[string]any{"query": "   "})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("status = %d, want 400 for a blank query", resp.StatusCode)
+	}
+}
+
+func TestAPreviewWithoutUpstreamsSaysSo(t *testing.T) {
+	h := start(t, nil)
+
+	resp := h.do(t, http.MethodPost, "/api/embedding/preview", map[string]any{"query": "x"})
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Errorf("status = %d, want 503 without a connection manager", resp.StatusCode)
 	}
 }

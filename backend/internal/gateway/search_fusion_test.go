@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 )
@@ -130,5 +131,50 @@ func TestAToolTheWordsMissedHasNoLexicalRank(t *testing.T) {
 	// Equal semantic ranks; the one the words also found comes first.
 	if fused[0] <= fused[1] {
 		t.Errorf("fused = %v, want the tool the words found above the one they did not", fused)
+	}
+}
+
+// The fusion's own cost at directory scale: one more ordering of the
+// candidates plus the arithmetic that combines two ranks. The semantic
+// half is a table here — the network call is not what these measure.
+func benchmarkCandidates(count int) []Searchable {
+	kinds := []string{"docs", "code", "issues", "notes", "files", "chat", "mail", "data"}
+	nouns := []string{"documents", "files", "records", "issues", "pages", "users", "channels", "tasks"}
+
+	out := make([]Searchable, 0, count)
+	for i := 0; i < count; i++ {
+		kind := kinds[i%len(kinds)]
+		noun := nouns[(i/len(kinds))%len(nouns)]
+		out = append(out, Searchable{
+			Server:      fmt.Sprintf("%s-%d", kind, i/len(kinds)),
+			Tool:        "read_" + noun,
+			Description: fmt.Sprintf("read the %s of the %s store", noun, kind),
+			Arguments:   "id limit offset",
+		})
+	}
+	return out
+}
+
+func BenchmarkSearchLexicalOverThirtyThousand(b *testing.B) {
+	candidates := benchmarkCandidates(30_000)
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = searchCandidatesWith("read a file 读取文件", candidates, 5, nil)
+	}
+}
+
+func BenchmarkSearchFusedOverThirtyThousand(b *testing.B) {
+	candidates := benchmarkCandidates(30_000)
+	// Every candidate above the floor is the worst case for the fusion:
+	// both orders are full lists.
+	similarities := make([]float32, len(candidates))
+	for i := range similarities {
+		similarities[i] = 0.5
+	}
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _ = searchCandidatesWith("read a file 读取文件", candidates, 5, similarities)
 	}
 }

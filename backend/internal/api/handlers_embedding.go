@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"mcp-foyer/internal/config"
 	"mcp-foyer/internal/embedding"
+	"mcp-foyer/internal/gateway"
 	"mcp-foyer/internal/semantic"
 )
 
@@ -95,13 +97,18 @@ func (a *API) handleTestEmbedding(c *gin.Context) {
 	})
 }
 
-// StatusSource reports the state of the embedding index.
+// Semantic is the embedding index as this package uses it: its state for
+// the status endpoint, and its ranking for the preview.
 //
 // An interface rather than the indexer itself, so that this package is
 // not tied to how the index is built. A nil one means this process has
 // none, which is what a test of the routing layer alone wants.
-type StatusSource interface {
+type Semantic interface {
 	Status() semantic.Status
+
+	// gateway.Semantics is the very method search_tools calls, so that the
+	// preview cannot disagree with the search about what a caller gets.
+	gateway.Semantics
 }
 
 // handleEmbeddingStatus reports how far the index has got, which is what
@@ -112,4 +119,78 @@ func (a *API) handleEmbeddingStatus(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, a.opts.Semantic.Status())
+}
+
+const (
+	defaultPreviewLimit = 5
+	maxPreviewLimit     = 20
+)
+
+// embeddingPreviewResult is one query ranked both ways.
+//
+// The two lists are what a search would have returned at the moment it was
+// asked: the lexical order, and the order with the meaning fused in. The
+// similarity floor has no universal value — cosines are a property of the
+// model — so the way to choose it is to look at what it does to this
+// directory.
+type embeddingPreviewResult struct {
+	Enabled bool   `json:"enabled"`
+	Model   string `json:"model,omitempty"`
+
+	Literal []gateway.SearchHit `json:"literal"`
+	Fused   []gateway.SearchHit `json:"fused"`
+
+	Unmatched []string `json:"unmatched,omitempty"`
+}
+
+// handleEmbeddingPreview ranks one query both ways, through the same
+// entry point search_tools uses, so that what the page shows is what a
+// caller would get.
+func (a *API) handleEmbeddingPreview(c *gin.Context) {
+	var body struct {
+		Query string `json:"query"`
+		Limit *int   `json:"limit,omitempty"`
+	}
+	if err := bindJSON(c, &body); err != nil {
+		fail(c, err)
+		return
+	}
+
+	query := strings.TrimSpace(body.Query)
+	if query == "" {
+		fail(c, BadRequest("query is empty; the preview ranks a query"))
+		return
+	}
+	limit := defaultPreviewLimit
+	if body.Limit != nil {
+		limit = *body.Limit
+	}
+	if limit < 1 || limit > maxPreviewLimit {
+		fail(c, BadRequest(fmt.Sprintf("limit must be between 1 and %d", maxPreviewLimit)))
+		return
+	}
+	if a.opts.Upstreams == nil {
+		fail(c, Unavailable("no upstream connections are running"))
+		return
+	}
+
+	candidates := gateway.Searchables(a.opts.Upstreams, a.opts.Configs, "")
+	literal, unmatched := gateway.RankTools(c.Request.Context(), query, candidates, limit, nil)
+
+	enabled := a.opts.Semantic != nil && a.opts.Configs.Get().Embedding.Enabled
+	fused := literal
+	if enabled {
+		fused, _ = gateway.RankTools(c.Request.Context(), query, candidates, limit, a.opts.Semantic)
+	}
+
+	result := embeddingPreviewResult{
+		Enabled:   enabled,
+		Literal:   literal,
+		Fused:     fused,
+		Unmatched: unmatched,
+	}
+	if a.opts.Semantic != nil {
+		result.Model = a.opts.Semantic.Status().Model
+	}
+	c.JSON(http.StatusOK, result)
 }

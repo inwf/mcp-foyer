@@ -5,6 +5,7 @@ import type {
   Config,
   ConfigResponse,
   ConfigWriteResponse,
+  EmbeddingPreview,
   EmbeddingStatus,
   EmbeddingTestResult,
   GatewayStatus,
@@ -55,6 +56,11 @@ export const endpoints = {
 
   /** How far the embedding index has got. Only the settings page asks. */
   embeddingStatus: () => api.get<EmbeddingStatus>(`${BASE}/embedding/status`),
+
+  /** Ranks one query both ways, for the settings page to show side by
+   *  side. A blank query is refused rather than answered. */
+  previewEmbedding: (query: string) =>
+    api.post<EmbeddingPreview>(`${BASE}/embedding/preview`, { query }),
 
   // ===== servers =====
 
