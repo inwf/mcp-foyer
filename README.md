@@ -162,6 +162,10 @@ A typical request needs just a search and a call:
 
 Already know the tool and its arguments? Call it directly through `call_tool`. Exposed tools are also available under names such as `files_read_text_file`, with naming collisions handled automatically.
 
+### How search ranks
+
+`search_tools` matches names, descriptions, server names, and argument names with field-weighted BM25. Add an embedding service and the same query is ranked by meaning as well; the two rankings are fused into one, so a tool the words miss can still come up. This is hybrid retrieval, the retrieval half of a RAG pipeline; the generation half is the calling model's own. Embeddings are off by default and configured from the web console; see the [configuration reference](docs/configuration.md).
+
 ### Exposure and disabling
 
 | Tool state | In the initial tool list | Discoverable | Callable |
