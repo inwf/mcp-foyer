@@ -42,7 +42,7 @@ It is built for personal, local use — especially with clients that do not prov
     </td>
     <td width="33%" valign="top">
       <h3>🔎 Discover on demand</h3>
-      Search by tool, description, server, or argument. Fetch matching schemas in the same request when preparing a call.
+      Search by tool, description, server, or argument. Fetch matching schemas in the same request when preparing a call. Add an embedding service and results also rank by meaning, so wording the directory does not use can still find the tool.
     </td>
     <td width="33%" valign="top">
       <h3>🎛️ Control each tool</h3>
