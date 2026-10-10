@@ -76,3 +76,36 @@ func supportedSchemaVersion(version string) bool {
 	}
 	return false
 }
+
+// requiredArguments lists the argument names a tool's input schema marks
+// as required, in the schema's own order. It reports none when the schema
+// describes no object or marks none, which is also what a tool taking no
+// arguments gets.
+//
+// The names answer the question a reader of a search hit has next: whether
+// the call can be made from what is already known, or the schema has to be
+// fetched first.
+func requiredArguments(schema any) []string {
+	decoded, ok := schema.(map[string]any)
+	if !ok {
+		decoded, ok = decodeObjectSchema(schema)
+	}
+	if !ok || decoded["type"] != "object" {
+		return nil
+	}
+	var names []string
+	switch required := decoded["required"].(type) {
+	case []string:
+		names = append(names, required...)
+	case []any:
+		for _, name := range required {
+			if text, ok := name.(string); ok {
+				names = append(names, text)
+			}
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	return names
+}

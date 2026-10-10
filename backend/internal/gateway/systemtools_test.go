@@ -306,6 +306,312 @@ func TestACrossServerPageSpreadsAcrossServers(t *testing.T) {
 	}
 }
 
+// twoNamedServers is the fixture for the narrowing tests: two connected
+// servers offering the same two capabilities under their own names.
+func twoNamedServers(t *testing.T) *mcp.ClientSession {
+	t.Helper()
+
+	ups := &fakeUpstreams{
+		statuses: []upstream.Status{
+			{Name: "docs", State: upstream.StateConnected, ToolCount: 2},
+			{Name: "notes", State: upstream.StateConnected, ToolCount: 2},
+		},
+		tools: map[string][]*mcp.Tool{
+			"docs": {
+				{Name: "read_page", Description: "read a page of documentation"},
+				{Name: "write_page", Description: "write a page of documentation"},
+			},
+			"notes": {
+				{Name: "read_note", Description: "read a saved note"},
+				{Name: "write_note", Description: "write a saved note"},
+			},
+		},
+	}
+	cfgs := configFixture(t, map[string]config.MCPServer{
+		"docs":  {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+		"notes": {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+	})
+	return gatewayFixture(t, ups, cfgs)
+}
+
+// A query that names one server is answered from it alone: the caller has
+// already said where to look, and the spread would otherwise bury what it
+// asked about under near-identical tools from elsewhere. The narrowed
+// name comes back in server, so the caller sees the scope it got.
+func TestAQueryNamingAServerSearchesThatServerAlone(t *testing.T) {
+	session := twoNamedServers(t)
+
+	var page struct {
+		Server string `json:"server"`
+		Hits   []struct {
+			Server string `json:"server"`
+			Tool   string `json:"tool"`
+		} `json:"hits"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read docs"}), &page)
+
+	if page.Server != "docs" {
+		t.Errorf("server = %q, want the server the query names", page.Server)
+	}
+	if len(page.Hits) != 2 {
+		t.Fatalf("hits = %+v, want both docs tools and nothing else", page.Hits)
+	}
+	for _, hit := range page.Hits {
+		if hit.Server != "docs" {
+			t.Errorf("%s/%s came from outside the named server", hit.Server, hit.Tool)
+		}
+	}
+
+	// The same words without the name span servers, and the empty server
+	// field says so.
+	page.Hits, page.Server = nil, ""
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read"}), &page)
+	if page.Server != "" {
+		t.Errorf("server = %q, want empty for a cross-server search", page.Server)
+	}
+	seen := map[string]bool{}
+	for _, hit := range page.Hits {
+		seen[hit.Server] = true
+	}
+	if !seen["docs"] || !seen["notes"] {
+		t.Errorf("hits = %+v, want both servers searched without the name", page.Hits)
+	}
+}
+
+// Naming two servers leaves the search cross-server: with no way to
+// choose between them, nothing is narrowed.
+func TestAQueryNamingTwoServersIsNotNarrowed(t *testing.T) {
+	session := twoNamedServers(t)
+
+	var page struct {
+		Server string `json:"server"`
+		Hits   []struct {
+			Server string `json:"server"`
+		} `json:"hits"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read docs notes"}), &page)
+
+	if page.Server != "" {
+		t.Errorf("server = %q, want no narrowing when two servers are named", page.Server)
+	}
+	seen := map[string]bool{}
+	for _, hit := range page.Hits {
+		seen[hit.Server] = true
+	}
+	if !seen["docs"] || !seen["notes"] {
+		t.Errorf("hits = %+v, want both servers still searched", page.Hits)
+	}
+}
+
+// A server that is named but not connected narrows nothing: the search
+// stays cross-server, and unavailable already says the named server could
+// not be looked at.
+func TestAQueryNamingADisconnectedServerIsNotNarrowed(t *testing.T) {
+	ups := &fakeUpstreams{
+		statuses: []upstream.Status{
+			{Name: "docs", State: upstream.StateConnected, ToolCount: 1},
+			{Name: "notes", State: upstream.StateFailed, Error: "command not found"},
+		},
+		tools: map[string][]*mcp.Tool{
+			"docs": {{Name: "read_page", Description: "read a page of documentation"}},
+		},
+	}
+	cfgs := configFixture(t, map[string]config.MCPServer{
+		"docs":  {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+		"notes": {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+	})
+	session := gatewayFixture(t, ups, cfgs)
+
+	var page struct {
+		Server      string `json:"server"`
+		Unavailable []struct {
+			Name string `json:"name"`
+		} `json:"unavailable"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read notes"}), &page)
+
+	if page.Server != "" {
+		t.Errorf("server = %q, want no narrowing to a server that is down", page.Server)
+	}
+	if len(page.Unavailable) != 1 || page.Unavailable[0].Name != "notes" {
+		t.Errorf("unavailable = %+v, want the named server reported as skipped", page.Unavailable)
+	}
+}
+
+// An explicit server wins over a name in the query: the caller has made
+// the scope unambiguous.
+func TestAnExplicitServerWinsOverAQueryWordMatchingAnother(t *testing.T) {
+	session := twoNamedServers(t)
+
+	var page struct {
+		Server string `json:"server"`
+		Hits   []struct {
+			Server string `json:"server"`
+		} `json:"hits"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"query": "read notes", "server": "docs"}), &page)
+
+	if page.Server != "docs" {
+		t.Errorf("server = %q, want the explicitly named server", page.Server)
+	}
+	if len(page.Hits) == 0 {
+		t.Fatal("the explicit server returned nothing")
+	}
+	for _, hit := range page.Hits {
+		if hit.Server != "docs" {
+			t.Errorf("hits include %s, want only docs", hit.Server)
+		}
+	}
+}
+
+// A server's name is matched in the spellings a caller cannot be expected
+// to keep apart: case, and pieces joined or separated.
+func TestAServerIsNamedInTheSpellingsModelsWrite(t *testing.T) {
+	ups := &fakeUpstreams{
+		statuses: []upstream.Status{{Name: "my-wiki", State: upstream.StateConnected, ToolCount: 1}},
+		tools: map[string][]*mcp.Tool{
+			"my-wiki": {{Name: "read_page", Description: "read a page"}},
+		},
+	}
+	cfgs := configFixture(t, map[string]config.MCPServer{
+		"my-wiki": {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+	})
+	session := gatewayFixture(t, ups, cfgs)
+
+	for _, query := range []string{"pages MY-WIKI", "pages mywiki", "pages my_wiki"} {
+		var page struct {
+			Server string `json:"server"`
+		}
+		structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+			map[string]any{"query": query}), &page)
+		if page.Server != "my-wiki" {
+			t.Errorf("query %q: server = %q, want my-wiki", query, page.Server)
+		}
+	}
+}
+
+// A narrowed search pages within the server it was narrowed to: the
+// resolved name is part of the cursor's scope, so the next page belongs
+// to the same search and cannot wander to another server.
+func TestANarrowedSearchPagesWithinTheNamedServer(t *testing.T) {
+	session := twoNamedServers(t)
+
+	page := searchPage(t, session, map[string]any{"query": "read docs", "limit": 1})
+	if page.NextCursor == "" {
+		t.Fatal("no next cursor, so nothing was paged")
+	}
+	second := searchPage(t, session, map[string]any{
+		"query": "read docs", "limit": 1, "cursor": page.NextCursor,
+	})
+	if len(second.Hits) != 1 {
+		t.Fatalf("second page = %d hits, want 1", len(second.Hits))
+	}
+
+	seen := map[string]bool{}
+	for _, hit := range append(page.Hits, second.Hits...) {
+		if hit.Server != "docs" {
+			t.Errorf("%s/%s came from outside the named server", hit.Server, hit.Tool)
+		}
+		if seen[hit.Tool] {
+			t.Errorf("%s appeared on both pages", hit.Tool)
+		}
+		seen[hit.Tool] = true
+	}
+	if len(seen) != 2 {
+		t.Errorf("paged %d tools, want the named server's two", len(seen))
+	}
+}
+
+// A hit names the arguments the tool requires: that is what decides
+// whether the schema has to be fetched before calling, so it does not
+// wait for includeSchema.
+func TestEveryHitNamesTheArgumentsItRequires(t *testing.T) {
+	ups := &fakeUpstreams{
+		statuses: []upstream.Status{{Name: "files", State: upstream.StateConnected, ToolCount: 2}},
+		tools: map[string][]*mcp.Tool{
+			"files": {
+				{Name: "read", Description: "read a file", InputSchema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"path": map[string]any{"type": "string"},
+					},
+					"required": []string{"path"},
+				}},
+				{Name: "list", Description: "list a directory"},
+			},
+		},
+	}
+	cfgs := configFixture(t, map[string]config.MCPServer{
+		"files": {Transport: config.TransportStdio, Command: "npx", Enabled: true, Timeout: time.Minute},
+	})
+	session := gatewayFixture(t, ups, cfgs)
+
+	var page struct {
+		Hits []map[string]any `json:"hits"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"server": "files"}), &page)
+
+	byTool := map[string]map[string]any{}
+	for _, hit := range page.Hits {
+		byTool[fmt.Sprint(hit["tool"])] = hit
+	}
+	if len(byTool) != 2 {
+		t.Fatalf("hits = %v, want both files tools", page.Hits)
+	}
+	required, _ := byTool["read"]["requiredArgs"].([]any)
+	if !slices.Equal(required, []any{"path"}) {
+		t.Errorf("read requiredArgs = %v, want [path]", byTool["read"]["requiredArgs"])
+	}
+	if _, present := byTool["list"]["requiredArgs"]; present {
+		t.Errorf("list carries requiredArgs with nothing required: %v", byTool["list"])
+	}
+}
+
+// The required names on a hit and the schema behind includeSchema are
+// read from the same schema, so they cannot disagree about what a call
+// must provide.
+func TestTheRequiredArgumentsAgreeWithTheSchema(t *testing.T) {
+	ups := twoServers()
+	ups.tools["files"][0].InputSchema.(map[string]any)["required"] = []string{"path"}
+	session := gatewayFixture(t, ups, twoServersConfig(t))
+
+	var page struct {
+		Hits []struct {
+			Tool         string         `json:"tool"`
+			RequiredArgs []string       `json:"requiredArgs"`
+			InputSchema  map[string]any `json:"inputSchema"`
+		} `json:"hits"`
+	}
+	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
+		map[string]any{"server": "files", "includeSchema": true}), &page)
+
+	if len(page.Hits) == 0 {
+		t.Fatal("no hits, so nothing agreed on anything")
+	}
+	byTool := map[string][]string{}
+	for _, hit := range page.Hits {
+		byTool[hit.Tool] = hit.RequiredArgs
+		var names []string
+		if schemaRequired, ok := hit.InputSchema["required"].([]any); ok {
+			for _, name := range schemaRequired {
+				names = append(names, fmt.Sprint(name))
+			}
+		}
+		if !slices.Equal(hit.RequiredArgs, names) {
+			t.Errorf("%s: requiredArgs = %v, schema requires %v", hit.Tool, hit.RequiredArgs, names)
+		}
+	}
+	if !slices.Equal(byTool["read"], []string{"path"}) {
+		t.Errorf("read requiredArgs = %v, want [path] from its schema", byTool["read"])
+	}
+}
+
 // A directory with dozens of servers down must not carry dozens of
 // entries in every result: five are named and the rest are counted.
 func TestUnavailableIsBoundedAndCounted(t *testing.T) {

@@ -114,7 +114,7 @@ type callToolInput struct {
 }
 
 type searchToolsInput struct {
-	Query         string `json:"query,omitempty" jsonschema:"words describing the capability, matched against tool and server names and descriptions and parameter names, in any spelling (readFile finds read_file); rarer words weigh more and a word matching nothing is ignored, not fatal. The directory may mix languages, so when unsure give the words in both. Supply query or server"`
+	Query         string `json:"query,omitempty" jsonschema:"words describing the capability, matched against tool and server names and descriptions and parameter names, in any spelling (readFile finds read_file); a word matching one server's name searches that server alone; rarer words weigh more and a word matching nothing is ignored, not fatal. The directory may mix languages, so when unsure give the words in both. Supply query or server"`
 	Server        string `json:"server,omitempty" jsonschema:"exact server name to search within, or to browse when query is omitted; mcp-foyer for this endpoint's own tools"`
 	Limit         *int   `json:"limit,omitempty" jsonschema:"maximum number of results, from 1 to 20; default 5"`
 	IncludeSchema bool   `json:"includeSchema,omitempty" jsonschema:"also return each hit's complete input schema and annotations, so a call can be prepared from this one result; default false. Combine with a limit of 1 to 3"`
@@ -125,13 +125,25 @@ type searchToolsInput struct {
 // discovery results extend it only on the system tool surface.
 type searchToolHit struct {
 	SearchHit
+
+	// RequiredArgs names the arguments a call has to provide, from the
+	// tool's cached input schema. It is what decides whether the schema
+	// must be fetched before calling, so it rides on every hit rather
+	// than behind includeSchema; the names are small and bounded by the
+	// page. Absent when the schema names none or cannot be read, which
+	// is also what a tool taking no arguments reports.
+	RequiredArgs []string `json:"requiredArgs,omitempty"`
+
 	Title       string               `json:"title,omitempty"`
 	InputSchema map[string]any       `json:"inputSchema,omitempty"`
 	Annotations *mcp.ToolAnnotations `json:"annotations,omitempty"`
 }
 
 type searchToolsOutput struct {
-	Query      string          `json:"query,omitempty"`
+	Query string `json:"query,omitempty"`
+
+	// Server is the server the search was limited to: the one the caller
+	// named, or the one its query named. Empty for a cross-server search.
 	Server     string          `json:"server,omitempty"`
 	Hits       []searchToolHit `json:"hits"`
 	NextCursor string          `json:"nextCursor,omitempty"`
@@ -189,11 +201,13 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, sem Se
 		Name: ToolSearchTools,
 		Description: "Find tools on the servers behind this endpoint by describing the capability, or browse one server by giving " +
 			"server alone. Most tools are not in this tool list and are only reachable this way; every hit can then be called " +
-			"with call_tool(server, tool, args). Results are ranked best first, five per page by default; includeSchema=true " +
-			"returns each hit's input schema so the call can be prepared from the same result. " +
+			"with call_tool(server, tool, args). Results are ranked best first, five per page by default, each hit naming " +
+			"the arguments the tool requires; includeSchema=true returns each hit's complete input schema so the call can " +
+			"be prepared from the same result. " +
 			"Words that matched nothing are reported in unmatched; words too common to tell tools apart " +
 			"(the, what, my) are ignored, so a query made only of them comes back empty and names them. " +
-			"A cross-server search spreads its hits, at most two per server unless only one matched; " +
+			"A query naming one server searches that server alone and reports it in server; " +
+			"a cross-server search spreads its hits, at most two per server unless only one matched; " +
 			"browse one server to see all it has. " +
 			"Servers that are not connected are named in unavailable, up to five, with unavailableMore counting the rest; " +
 			"browsing one gives the reason.",
@@ -353,6 +367,46 @@ func cachedTool(ups Upstreams, server, tool string) *mcp.Tool {
 	return nil
 }
 
+// ServerNamedIn reports the one connected server a query names, or "" when
+// it names none or several.
+//
+// A caller that writes a server's name into its query has already said
+// where to look; answering from every server anyway buries the tools it
+// asked about under near-identical ones from elsewhere. The comparison
+// absorbs the spellings a caller cannot be expected to keep apart: case,
+// and pieces joined or separated ("mywiki" names my-wiki).
+func ServerNamedIn(query string, ups Upstreams) string {
+	statuses := ups.Statuses()
+	named := ""
+	for _, word := range strings.Fields(query) {
+		for _, status := range statuses {
+			if !status.Connected() || !namesServer(word, status.Name) {
+				continue
+			}
+			if named != "" && named != status.Name {
+				// Two servers in one query: there is no way to choose
+				// between them, so nothing is narrowed.
+				return ""
+			}
+			named = status.Name
+		}
+	}
+	return named
+}
+
+// namesServer reports whether one query word is a server's name: the same
+// pieces in the same order, or the same pieces joined, so mygit names
+// my-git and readfile names read_file.
+func namesServer(word, name string) bool {
+	wordPieces := tokenizeVerbatim(word)
+	namePieces := tokenizeVerbatim(name)
+	if len(wordPieces) == 0 || len(namePieces) == 0 {
+		return false
+	}
+	return slices.Equal(wordPieces, namePieces) ||
+		strings.Join(wordPieces, "") == strings.Join(namePieces, "")
+}
+
 func searchTools(ctx context.Context, ups Upstreams, cfgs Configs, sem Semantics, own OwnTools, in searchToolsInput) (searchToolsOutput, error) {
 	in.Query = strings.TrimSpace(in.Query)
 	in.Server = strings.TrimSpace(in.Server)
@@ -370,6 +424,12 @@ func searchTools(ctx context.Context, ups Upstreams, cfgs Configs, sem Semantics
 		if err := requireServer(ups, in.Server); err != nil {
 			return searchToolsOutput{}, err
 		}
+	}
+	// A query that names one connected server is answered from it alone:
+	// the caller has already said where to look, and a page spread over
+	// the other servers would only carry tools it did not ask about.
+	if in.Server == "" {
+		in.Server = ServerNamedIn(in.Query, ups)
 	}
 
 	cfg := cfgs.Get()
@@ -429,8 +489,12 @@ func searchTools(ctx context.Context, ups Upstreams, cfgs Configs, sem Semantics
 	}
 	for _, hit := range hits[start:end] {
 		result := searchToolHit{SearchHit: hit}
+		tool := byOrigin[Route{Server: hit.Server, Tool: hit.Tool}]
+		if tool != nil {
+			result.RequiredArgs = requiredArguments(tool.InputSchema)
+		}
 		if in.IncludeSchema {
-			detail := describeTool(hit.Server, byOrigin[Route{Server: hit.Server, Tool: hit.Tool}], hit.Exposed)
+			detail := describeTool(hit.Server, tool, hit.Exposed)
 			result.Title = detail.Title
 			result.InputSchema = detail.InputSchema
 			result.Annotations = detail.Annotations

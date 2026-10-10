@@ -30,9 +30,14 @@
 或单台浏览给出；一切正常时该字段不出现。跨服务器搜索会把命中摊开在多台服务器上，每台最多两条（命中只来自一台时不受限）；
 想看一台的全部工具就用 `server` 浏览，浏览不受限。
 
+查询里有一个词与某台已连接服务器的名字相同（忽略大小写，`my-git` 与 `mygit` 算
+同一个名字）时，这次搜索按那台收窄，等于显式传了 `server`，返回的 `server` 是收窄
+后的名字；点到两台以上、点的那台没连上，或显式传了 `server` 时都不收窄。
+
 搜索和详情以 **`server` + `tool`** 标识一个工具，避免不同上游的短名冲突。
 `exposed` 为可直接调用的发布名，未暴露时为空。上游工具即使与系统工具同名，
-`call_tool` 也按指定的上游转发。
+`call_tool` 也按指定的上游转发。每条命中还列出该工具的必填参数名
+（`requiredArgs`），没有必填或 schema 读不出时省略。
 
 ## 面向简单客户端的约定
 
@@ -111,7 +116,8 @@ mcp-foyer 记录模型对每个工具的使用：`search_tools` 返回给模型�
       "description":"read a file",
       "matched":2,
       "score":1487,
-      "inputSchema":{"type":"object","properties":{"path":{"type":"string"}}}
+      "requiredArgs":["path"],
+      "inputSchema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}
     }
   ]
 }

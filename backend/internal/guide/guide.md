@@ -179,7 +179,9 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
   词列在 `unmatched`。`the`、`what`、`my` 这类虚词不参与匹配和计分，除非它们
   出现在工具名或服务器名里；整句都是虚词时结果为空，并把它们列进
   `unmatched`。查询要用目录所用的语言，目录可能中英混合，不确定时两种
-  语言的词都写上。
+  语言的词都写上。`query` 里有一个词与某台已连接服务器的名字相同（忽略大小写，
+  `my-git` 和 `mygit` 算同一个名字）时，这次搜索只搜那台，返回的 `server` 是收窄
+  后的名字；点到两台以上、点的那台没连上，或显式传了 `server` 时都不收窄。
 - `limit` 默认 **5**，范围 **1–20**。显式传 0、负数或大于 20 会报错。
 - `includeSchema` 默认 `false`；设为 `true` 时返回所选结果的完整 schema 和
   annotations，默认数量仍为 5。准备调用通常取 1–3 个候选即可，schema 不截断。
@@ -191,6 +193,7 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 
 搜索结果和工具详情都用 `server` + `tool` 标识工具；`exposed` 是可直接调用的
 对外名，未暴露时为空。结果按 `score` 排序；`matched` 是命中的查询词数，只供参考。
+每条命中还带 `requiredArgs`，列出该工具的必填参数名；没有必填或读不出 schema 时省略。
 跨服务器搜索会把命中摊开在多台服务器上，每台最多两条（命中只来自一台时不受限），
 想看一台的全部工具就用 `server` 浏览。
 跨服务器搜索时，未连接的服务器会列在 `unavailable` 里（名字与状态，最多五条，

@@ -265,8 +265,11 @@ func TestTheGatewayDescribesItsOwnTools(t *testing.T) {
 	session := clientOn(t, url, nil)
 
 	var listed struct {
-		Server string              `json:"server"`
-		Hits   []gateway.SearchHit `json:"hits"`
+		Server string `json:"server"`
+		Hits   []struct {
+			gateway.SearchHit
+			RequiredArgs []string `json:"requiredArgs"`
+		} `json:"hits"`
 	}
 	structured(t, callSystemTool(t, session, gateway.ToolSearchTools,
 		map[string]any{"server": gateway.Name}), &listed)
@@ -278,6 +281,7 @@ func TestTheGatewayDescribesItsOwnTools(t *testing.T) {
 		t.Fatalf("listed %d of its own tools, want all %d: %+v",
 			len(listed.Hits), len(gateway.SystemToolNames), listed.Hits)
 	}
+	var callToolRequired []string
 	for _, tool := range listed.Hits {
 		if !gateway.IsSystemTool(tool.Tool) {
 			t.Errorf("%q is not one of the gateway's tools", tool.Tool)
@@ -290,6 +294,14 @@ func TestTheGatewayDescribesItsOwnTools(t *testing.T) {
 		if tool.Description == "" {
 			t.Errorf("%q has no description", tool.Tool)
 		}
+		if tool.Tool == gateway.ToolCallTool {
+			callToolRequired = tool.RequiredArgs
+		}
+	}
+	// call_tool's schema needs a server and a tool, and the hit says so
+	// instead of making the reader fetch the schema to find out.
+	if !slices.Equal(callToolRequired, []string{"server", "tool"}) {
+		t.Errorf("%s requires %v, want [server tool]", gateway.ToolCallTool, callToolRequired)
 	}
 }
 

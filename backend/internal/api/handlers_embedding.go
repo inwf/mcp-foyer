@@ -174,7 +174,10 @@ func (a *API) handleEmbeddingPreview(c *gin.Context) {
 		return
 	}
 
-	candidates := gateway.Searchables(a.opts.Upstreams, a.opts.Configs, "")
+	// The narrowing search_tools applies to the same words, so that the
+	// page shows what a caller naming a server would get.
+	candidates := gateway.Searchables(a.opts.Upstreams, a.opts.Configs,
+		gateway.ServerNamedIn(query, a.opts.Upstreams))
 	literal, unmatched := gateway.RankTools(c.Request.Context(), query, candidates, limit, nil)
 
 	enabled := a.opts.Semantic != nil && a.opts.Configs.Get().Embedding.Enabled
