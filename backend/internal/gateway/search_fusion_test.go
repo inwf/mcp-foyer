@@ -94,10 +94,10 @@ func TestReciprocalRankFusionRewardsAgreement(t *testing.T) {
 	// The words order x, y, z; the meaning knows only y — and knows it
 	// well. Two weak agreements beat one strong one, which is what keeps
 	// a single ranking from deciding on its own.
-	reported := []int{300, 200, 100}
+	scores := []float64{3, 2, 1}
 	similarities := []float32{0, 0.9, 0}
 
-	fused := reciprocalRankFusion(reported, similarities, candidates)
+	fused := reciprocalRankFusion(scores, similarities, candidates)
 
 	if fused[1] <= fused[0] {
 		t.Errorf("fused = %v, want the tool both rankings like above the one only the words like", fused)
@@ -109,9 +109,9 @@ func TestReciprocalRankFusionRewardsAgreement(t *testing.T) {
 
 func TestReciprocalRankFusionWithoutASignalIsTheLexicalOrder(t *testing.T) {
 	candidates := []Searchable{{Server: "a", Tool: "x"}, {Server: "a", Tool: "y"}}
-	reported := []int{100, 300}
+	scores := []float64{1, 3}
 
-	fused := reciprocalRankFusion(reported, make([]float32, 2), candidates)
+	fused := reciprocalRankFusion(scores, make([]float32, 2), candidates)
 
 	if fused[1] <= fused[0] {
 		t.Errorf("fused = %v, want the higher lexical score first", fused)
@@ -123,10 +123,10 @@ func TestReciprocalRankFusionWithoutASignalIsTheLexicalOrder(t *testing.T) {
 // score it never earned.
 func TestAToolTheWordsMissedHasNoLexicalRank(t *testing.T) {
 	candidates := []Searchable{{Server: "a", Tool: "x"}, {Server: "a", Tool: "y"}}
-	reported := []int{100, 0}
+	scores := []float64{1, 0}
 	similarities := []float32{0.5, 0.5}
 
-	fused := reciprocalRankFusion(reported, similarities, candidates)
+	fused := reciprocalRankFusion(scores, similarities, candidates)
 
 	// Equal semantic ranks; the one the words also found comes first.
 	if fused[0] <= fused[1] {

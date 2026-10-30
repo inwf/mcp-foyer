@@ -77,7 +77,7 @@ mcp-foyer 记录模型对每个工具的使用：`search_tools` 返回给模型�
 
 | 参数 | 规则 |
 | --- | --- |
-| `query` | 可省略；匹配工具名、工具描述、服务器名、握手名称、服务器描述，以及输入 schema 里的参数名与参数描述。名字按 `_`、`-` 和驼峰拆词并折叠英文复数，中文按相邻两字匹配 |
+| `query` | 可省略；匹配工具名、工具描述、服务器名、握手名称、服务器描述，以及输入 schema 里的参数名与参数描述。名字按 `_`、`-` 和驼峰拆词，英文词还原为词干（`searching`、`searched` 都能找到 `search_files`），中文按相邻两字匹配 |
 | `server` | 可省略；准确的配置名，或 `mcp-foyer`；仅给此项时浏览单台服务器 |
 | `limit` | 默认 5，范围 1–20；两种 schema 模式相同，显式 0 也拒绝 |
 | `includeSchema` | 默认 false；true 时给所选候选附上完整输入 schema、title 和 annotations |
@@ -88,7 +88,7 @@ mcp-foyer 记录模型对每个工具的使用：`search_tools` 返回给模型�
 参数名与参数描述权重最低，长字段按长度折减。名字和参数名还以去掉分隔符的整体
 形式参与匹配，所以 `readfile`、`readFile`、`read file` 都能精确命中 `read_file`，
 `fullPage` 能精确命中同名参数。整体形式按写出的拼写归档：`readfile` 只命中
-`read_file`，不会落到 `read_files` 上；查询一侧同时带折叠复数的拼写，所以
+`read_file`，不会落到 `read_files` 上；查询一侧同时带词干的拼写，所以
 `listissues` 也能找到 `list_issues`。只按 `score` 排序，平局以服务器名和工具名稳定
 排序；`matched` 报告命中的查询词数，不参与排序。没有匹配任何候选的词放在
 `unmatched`，不抹掉其他词的结果；`the`、`what`、`my` 这类虚词不参与匹配与计分

@@ -22,8 +22,10 @@ type SearchHit struct {
 	// whole question from one that answered a word of it.
 	Matched int `json:"matched"`
 
-	// Score is relative: it orders one search's hits and means nothing
-	// across searches.
+	// Score is relative: it compares one search's hits and means nothing
+	// across searches. It is rounded for reading, and the order is decided
+	// before the rounding, so two hits can show the same score and still
+	// be in the order the search meant.
 	Score int `json:"score"`
 }
 
@@ -194,52 +196,51 @@ func searchCandidatesWith(query string, candidates []Searchable, limit int, simi
 	scores := idx.scores(queryTerms(distinctive))
 	matched := idx.wordsMatched(distinctive)
 
-	// The reported lexical scores, which both the plain order and the
-	// fused one's lexical half are built on — so a fusion that changes
-	// nothing changes nothing, down to the ties.
-	reported := make([]int, len(candidates))
-	for i := range scores {
-		reported[i] = reportedScore(scores[i])
-	}
-
 	// A blank query is browsing: there is nothing to embed, and the plain
 	// order is the one paging through a directory uses.
-	var fused []float64
+	ranking, report := scores, reportedScore
 	if len(words) > 0 && hasSemantics {
-		fused = reciprocalRankFusion(reported, similarities, candidates)
+		ranking, report = reciprocalRankFusion(scores, similarities, candidates), reportedFusion
 	}
 
-	hits := make([]SearchHit, 0, len(candidates))
-	for i, candidate := range candidates {
-		// A query with no words asks for everything; one with words asks
-		// for the tools that answered at least one of them, or that the
-		// semantic side could speak for. A query of nothing but common
-		// words asks for nothing, and gets it.
+	// A query with no words asks for everything; one with words asks for
+	// the tools that answered at least one of them, or that the semantic
+	// side could speak for. A query of nothing but common words asks for
+	// nothing, and gets it.
+	kept := make([]int, 0, len(candidates))
+	for i := range candidates {
 		if len(words) > 0 && matched[i] == 0 && similarities[i] <= 0 {
 			continue
 		}
-		score := reported[i]
-		if fused != nil {
-			score = reportedFusion(fused[i])
+		kept = append(kept, i)
+	}
+
+	// The order is decided on the scores themselves, never on the integers
+	// clients see: a word found in most of the directory scores a small
+	// fraction for every tool, and once rounded those fractions are all the
+	// same number, which would leave the order to the alphabet.
+	slices.SortFunc(kept, func(a, b int) int {
+		if ranking[a] != ranking[b] {
+			return cmp.Compare(ranking[b], ranking[a])
 		}
-		hits = append(hits, SearchHit{
+		return compareOrigins(candidates[a].Server, candidates[a].Tool,
+			candidates[b].Server, candidates[b].Tool)
+	})
+	if limit > 0 && len(kept) > limit {
+		kept = kept[:limit]
+	}
+
+	hits := make([]SearchHit, len(kept))
+	for n, i := range kept {
+		candidate := candidates[i]
+		hits[n] = SearchHit{
 			Server:      candidate.Server,
 			Tool:        candidate.Tool,
 			Exposed:     candidate.Exposed,
 			Description: candidate.Description,
 			Matched:     matched[i],
-			Score:       score,
-		})
-	}
-
-	slices.SortFunc(hits, func(a, b SearchHit) int {
-		if a.Score != b.Score {
-			return b.Score - a.Score
+			Score:       report(ranking[i]),
 		}
-		return compareOrigins(a.Server, a.Tool, b.Server, b.Tool)
-	})
-	if limit > 0 && len(hits) > limit {
-		hits = hits[:limit]
 	}
 
 	unmatched := make([]string, 0)
@@ -274,20 +275,20 @@ const rrfK = 60
 // common scale: one is relative to the other candidates, the other to the
 // model that produced it, and adding them would mean inventing a
 // calibration neither has.
-func reciprocalRankFusion(reported []int, similarities []float32, candidates []Searchable) []float64 {
+func reciprocalRankFusion(scores []float64, similarities []float32, candidates []Searchable) []float64 {
 	fused := make([]float64, len(candidates))
 
 	// A candidate that matched no word is not at the bottom of the
 	// lexical order; it is not in it.
 	lexical := make([]int, 0, len(candidates))
-	for i, score := range reported {
+	for i, score := range scores {
 		if score > 0 {
 			lexical = append(lexical, i)
 		}
 	}
 	slices.SortFunc(lexical, func(a, b int) int {
-		if reported[a] != reported[b] {
-			return cmp.Compare(reported[b], reported[a])
+		if scores[a] != scores[b] {
+			return cmp.Compare(scores[b], scores[a])
 		}
 		return compareOrigins(candidates[a].Server, candidates[a].Tool,
 			candidates[b].Server, candidates[b].Tool)
@@ -383,17 +384,29 @@ func wordTerms(word string) []string {
 // deliberately not indexed here, because read_file and read_files would
 // join to the same term and a caller spelling either exactly would land
 // on both. The folded join lives on the query side instead.
-func nameTerms(name string) []string {
+//
+// Many servers prefix every tool with their own name: slack_list_channels,
+// browser_take_screenshot, git_diff. A caller asking for listChannels has
+// already left the server out, so the name is also joined without the
+// prefix when it begins with the server's pieces — listchannels meets
+// slack_list_channels exactly, the way it meets a twin called
+// list_channels on another server.
+func nameTerms(server, name string) []string {
 	pieces := tokenizeVerbatim(name)
 	written, _ := joinedSpellings(pieces, nil)
+	var unprefixed string
+	if prefix := tokenizeVerbatim(server); len(prefix) > 0 &&
+		len(pieces) > len(prefix) && slices.Equal(pieces[:len(prefix)], prefix) {
+		unprefixed, _ = joinedSpellings(pieces[len(prefix):], nil)
+	}
 	for i, piece := range pieces {
 		pieces[i] = foldTerm(piece)
 	}
-	return appendNewTerms(pieces, written)
+	return appendNewTerms(pieces, written, unprefixed)
 }
 
 // joinedSpellings are the ways a piece sequence is joined into one term:
-// as written, and, when folding plurals changes it, the folded spelling
+// as written, and, when stemming changes it, the stemmed spelling
 // too. A sequence of fewer than two pieces has no joined form and
 // reports none.
 func joinedSpellings(written, folded []string) (string, string) {
@@ -483,14 +496,18 @@ func indexCandidates(candidates []Searchable) *searchIndex {
 		key := serverFields{candidate.Server, candidate.ServerTitle, candidate.ServerDescription}
 		shared, ok := serverTerms[key]
 		if !ok {
-			shared = [3][]string{tokenize(key.name), tokenize(key.title), tokenize(key.description)}
+			shared = [3][]string{
+				tokenize(key.name),
+				appendCharacterTerms(tokenize(key.title), key.title),
+				appendCharacterTerms(tokenize(key.description), key.description),
+			}
 			serverTerms[key] = shared
 		}
 		texts := [fieldCount][]string{
-			fieldName:              nameTerms(candidate.Tool),
+			fieldName:              nameTerms(candidate.Server, candidate.Tool),
 			fieldServer:            shared[0],
 			fieldServerTitle:       shared[1],
-			fieldDescription:       tokenize(candidate.Description),
+			fieldDescription:       appendCharacterTerms(tokenize(candidate.Description), candidate.Description),
 			fieldServerDescription: shared[2],
 			fieldArguments:         argumentTerms(candidate.Arguments),
 		}

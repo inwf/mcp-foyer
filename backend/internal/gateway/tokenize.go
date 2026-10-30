@@ -2,8 +2,11 @@ package gateway
 
 import (
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/kljensen/snowball/english"
 )
 
 // tokenize splits text into the terms the search matches on.
@@ -11,8 +14,9 @@ import (
 // Tool names are written every way there is: read_file, readFile,
 // read-file, ReadFile. A caller does not know which, and should not have
 // to. So a name is split at underscores, dashes, spaces and camel-case
-// boundaries, lowered, and reduced to a common plural-free form, so that
-// "issues" finds list_issues and "readFile" finds read_file.
+// boundaries, lowered, and reduced to its English stem, so that "issues"
+// finds list_issues, "searching" finds search_files and "readFile" finds
+// read_file.
 //
 // Chinese, Japanese and Korean have no word boundaries to split at, and
 // a dictionary would be a heavy dependency for a gateway. Runs of those
@@ -42,7 +46,7 @@ func tokenizeVerbatim(s string) []string {
 	return splitPieces(s)
 }
 
-// foldedPieces returns the pieces with plurals folded, a copy.
+// foldedPieces returns the pieces reduced to their stems, a copy.
 func foldedPieces(pieces []string) []string {
 	folded := make([]string, len(pieces))
 	for i, piece := range pieces {
@@ -52,9 +56,9 @@ func foldedPieces(pieces []string) []string {
 }
 
 // splitPieces cuts text into lowercased words and CJK pairs, in the
-// order they appear, before any plural folding. It is the one walk of
-// the text; folding is a second pass over what it returns, so a caller
-// that needs both spellings splits only once.
+// order they appear, before any stemming. It is the one walk of the
+// text; stemming is a second pass over what it returns, so a caller that
+// needs both spellings splits only once.
 func splitPieces(s string) []string {
 	if s == "" {
 		return nil
@@ -139,30 +143,40 @@ func isCamelBoundary(prev, r rune, rest string) bool {
 func foldTerm(word string) string {
 	// ToLower returns its argument unchanged, without copying, when
 	// there is nothing to lower — which is nearly always.
-	return foldPlural(strings.ToLower(word))
+	return stemTerm(strings.ToLower(word))
 }
 
-// foldPlural strips a regular English plural so that a query in one
-// number finds a name in the other. It is deliberately not a stemmer:
-// only the plural suffixes, only on words long enough that the ending is
-// a suffix rather than the word ("is", "has"). Applied to both sides,
-// an over-eager fold still matches; it just matches the same wrong form.
-func foldPlural(term string) string {
-	if len(term) <= 3 || !isASCIILetters(term) || !strings.HasSuffix(term, "s") {
+// stemTerm reduces an English word to its Snowball stem, so that a query
+// in one form finds a name or a description in another: searching finds
+// search_files, deleting finds delete_relations, committed finds
+// git_commit. Applied to both sides, a stem that is not a word ("issu")
+// still matches; it just matches the same form on each side.
+//
+// Only lower-case ASCII words are stemmed. A CJK pair is not English, and
+// a word with digits in it ("v2", "s3") is an identifier, which a stemmer
+// would only damage.
+func stemTerm(term string) string {
+	if !isASCIILetters(term) {
 		return term
 	}
-	switch {
-	case strings.HasSuffix(term, "ss"):
-		return term
-	case strings.HasSuffix(term, "ies"):
-		return term[:len(term)-3] + "y"
-	case strings.HasSuffix(term, "sses"), strings.HasSuffix(term, "xes"),
-		strings.HasSuffix(term, "zes"), strings.HasSuffix(term, "ches"), strings.HasSuffix(term, "shes"):
-		return term[:len(term)-2]
-	default:
-		return term[:len(term)-1]
+	if stem, ok := stems.Load(term); ok {
+		return stem.(string)
 	}
+	// Function words are stemmed too: they are cut from the query by
+	// their written spelling before this runs, and a stemmer that left
+	// some words alone would only add a second rule to reason about.
+	stem := english.Stem(term, true)
+	// The key is cloned: term is usually a substring of a description,
+	// and keeping it as a key would keep the whole description alive.
+	stems.Store(strings.Clone(term), stem)
+	return stem
 }
+
+// stems remembers every word's stem. The whole directory is tokenized on
+// every search, and stemming is most of what that costs; a directory's
+// vocabulary is a few thousand words that every search repeats, so the
+// table stops growing once the directory has been searched once.
+var stems sync.Map
 
 func isASCIILetters(s string) bool {
 	for i := 0; i < len(s); i++ {
@@ -186,6 +200,25 @@ func appendPairTerms(out []string, run string) []string {
 		out = append(out, run[start:i+size])
 		start = i
 		i += size
+	}
+	return out
+}
+
+// appendCharacterTerms appends every character of the text's CJK runs as
+// a term of its own. It is for the text being indexed, not for queries.
+//
+// A caller writing a single character (诗) means a word the directory
+// writes inside longer ones (古诗词), and pairs alone cannot meet it. A
+// character is far more common than a pair, so its weight stays below
+// that of the pair the caller would have written. Queries are not cut
+// this way: a query of several characters keeps to its pairs, and a
+// query for something the directory does not serve (火车票) does not come
+// back answered by tools that happen to contain 车.
+func appendCharacterTerms(out []string, s string) []string {
+	for i, r := range s {
+		if isPairScript(r) {
+			out = append(out, s[i:i+utf8.RuneLen(r)])
+		}
 	}
 	return out
 }

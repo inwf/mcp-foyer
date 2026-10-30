@@ -85,7 +85,7 @@ var scaleMisses = map[string]struct {
 }{
 	"listChannels": {
 		sizes:  []string{"20x50", "100x50", "100x100", "1000x30"},
-		reason: "the generated twins spell list_channels exactly while the corpus tool's server prefix keeps it off the joined form; at a thousand servers several twins clear it at once",
+		reason: "the generated twins are called list_channels, the same tool by name; slack_list_channels now meets the joined form too, and the twins' shorter names decide the page",
 	},
 	"list issues": {
 		sizes:  []string{"100x100"},

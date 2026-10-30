@@ -172,8 +172,9 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 
 - `query`、`server` 至少提供一个非空值。只填 `server` 就是浏览该服务器。
 - `query` 匹配工具名、工具描述、服务器名、握手名称、服务器描述，以及工具的参数名
-  和参数描述（`dryRun` 能找到 `edit_file`）。名字按 `_`、`-` 和驼峰拆词并折叠
-  复数，`readFile` 和 `readfile` 都能找到 `read_file` 且只落到它上面；中文按
+  和参数描述（`dryRun` 能找到 `edit_file`）。名字按 `_`、`-` 和驼峰拆词，英文词
+  还原为词干（`searching`、`deleted` 这类词形也能命中），`readFile` 和 `readfile`
+  都能找到 `read_file` 且只落到它上面；中文按
   相邻两字匹配，`查询天气` 能找到「查询指定城市的天气」。多个词命中任意一个即
   入选，越少见的词权重越高，命中名字比命中描述权重高，参数权重最低；未命中的
   词列在 `unmatched`。`the`、`what`、`my` 这类虚词不参与匹配和计分，除非它们
