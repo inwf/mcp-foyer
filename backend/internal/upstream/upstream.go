@@ -134,11 +134,12 @@ func (c *Conn) Connect(ctx context.Context) error {
 			c.deps.logger().Warn("could not list resources", "error", err)
 		}
 	}
-	if caps.logging {
-		if err := session.SetLoggingLevel(ctx, &mcp.SetLoggingLevelParams{Level: "info"}); err != nil {
-			c.deps.logger().Warn("could not set the server's logging level", "error", err)
-		}
-	}
+	// logging/setLevel is never sent, even to a server that declares
+	// logging. The specification lets a client leave the level to the
+	// server, and a server that declares the capability but answers the
+	// request with an HTTP error makes the streamable transport close the
+	// whole session — a reconnect then sends it again, and the server
+	// never stays up.
 
 	c.mu.Lock()
 	c.setStateLocked(StateConnected, nil)

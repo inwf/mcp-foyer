@@ -1,7 +1,10 @@
 package upstream_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -303,6 +306,56 @@ func TestStreamableHTTPFailsWhenNothingIsListening(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q does not mention %q", err, want)
 		}
+	}
+}
+
+// A server can declare logging and still answer logging/setLevel with an
+// HTTP error; dropbin does. The streamable transport closes the session
+// on such an answer, so a client that sends the request loses the server
+// right after connecting, reconnects, sends it again, and the server is
+// never usable. Leaving the level to the server keeps it connected.
+func TestStreamableHTTPStaysConnectedToAServerThatRejectsSettingTheLogLevel(t *testing.T) {
+	var rejected counter
+	url := httpServer(t, modeFull, func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Errorf("read the request body: %v", err)
+				return
+			}
+			var message struct {
+				Method string `json:"method"`
+			}
+			if len(body) > 0 {
+				if err := json.Unmarshal(body, &message); err != nil {
+					t.Errorf("decode the request body: %v", err)
+					return
+				}
+			}
+			if message.Method == "logging/setLevel" {
+				rejected.add()
+				http.Error(w, "Method not found: logging/setLevel", http.StatusBadRequest)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			next.ServeHTTP(w, r)
+		})
+	})
+	conn, _ := connectHTTP(t, httpConfig(url))
+
+	if !conn.Status().HasLogging {
+		t.Fatal("the test server does not declare logging, so this test cannot tell anything apart")
+	}
+	if _, err := conn.CallTool(context.Background(), "echo",
+		testmcp.EchoInput{Message: "still here"}); err != nil {
+		t.Fatalf("CallTool after connecting: %v", err)
+	}
+	if status := conn.Status(); !status.Connected() {
+		t.Errorf("state = %q, error = %q; want the connection to survive the handshake",
+			status.State, status.Error)
+	}
+	if n := rejected.get(); n != 0 {
+		t.Errorf("logging/setLevel was sent %d time(s); the level is left to the server", n)
 	}
 }
 

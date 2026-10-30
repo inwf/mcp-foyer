@@ -182,6 +182,9 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
   语言的词都写上。`query` 里有一个词与某台已连接服务器的名字相同（忽略大小写，
   `my-git` 和 `mygit` 算同一个名字）时，这次搜索只搜那台，返回的 `server` 是收窄
   后的名字；点到两台以上、点的那台没连上，或显式传了 `server` 时都不收窄。
+- `query` 描述工具能做什么。要处理的具体对象（仓库、人名、文件名）没有工具以它
+  命名，应当写进 `call_tool` 的 `args`。查 `deepseek-harness` 只会得到空结果；
+  查 `ask question about a github repository`，再把仓库名作为参数传给命中的工具。
 - `limit` 默认 **5**，范围 **1–20**。显式传 0、负数或大于 20 会报错。
 - `includeSchema` 默认 `false`；设为 `true` 时返回所选结果的完整 schema 和
   annotations，默认数量仍为 5。准备调用通常取 1–3 个候选即可，schema 不截断。
