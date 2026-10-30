@@ -113,6 +113,12 @@ export interface EmbeddingConfig {
    *  all, which is what keeps a query about something absent from
    *  conjuring hits. Model-dependent, so there is no universal value. */
   minSimilarity: number;
+  /** Written in front of every query before it is embedded. Absent when
+   *  the model wants none. */
+  queryPrefix?: string | undefined;
+  /** Written in front of every tool text before it is embedded; changing
+   *  it rebuilds the index. */
+  documentPrefix?: string | undefined;
 }
 
 /** What a probe of the embedding service found. Reaching the service is

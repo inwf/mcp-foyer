@@ -118,6 +118,11 @@ func (ix *Indexer) Rebuild(ctx context.Context) (embedding.Result, error) {
 	}
 
 	docs := Documents(ix.opts.Upstreams, cfg)
+	// The prefix is part of the text embedded, so it is part of the hash:
+	// changing it re-embeds every tool, which is what it has to do.
+	for i := range docs {
+		docs[i].Text = section.DocumentPrefix + docs[i].Text
+	}
 	ix.mu.Lock()
 	ix.total = len(docs)
 	ix.mu.Unlock()
@@ -251,36 +256,18 @@ func Documents(ups Sources, cfg config.Config) []embedding.Document {
 			out = append(out, embedding.Document{
 				Server: server,
 				Tool:   tool.Name,
-				Text:   documentText(server, title, description, tool),
+				Text: gateway.EmbeddingText(gateway.Searchable{
+					Server:            server,
+					ServerTitle:       title,
+					ServerDescription: description,
+					Tool:              tool.Name,
+					Description:       tool.Description,
+					Arguments:         gateway.ArgumentText(tool.InputSchema),
+				}),
 			})
 		}
 	}
 	return out
-}
-
-// documentText joins the parts a tool is embedded as, skipping the empty
-// ones — and the title when it merely repeats the server name, which is
-// what an upstream that never named itself produces.
-func documentText(server, serverTitle, serverDescription string, tool *mcp.Tool) string {
-	if serverTitle == server {
-		serverTitle = ""
-	}
-	parts := []string{
-		server,
-		serverTitle,
-		serverDescription,
-		tool.Name,
-		tool.Description,
-		gateway.ArgumentText(tool.InputSchema),
-	}
-
-	kept := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if part != "" {
-			kept = append(kept, part)
-		}
-	}
-	return strings.Join(kept, " ")
 }
 
 // The gateway asks for [gateway.Semantics]; this keeps the two from
@@ -336,7 +323,9 @@ func (ix *Indexer) Similarities(ctx context.Context, query string, candidates []
 // every page re-ranks the same query, and the same question asked twice
 // in a minute should cost one call.
 func (ix *Indexer) queryVector(ctx context.Context, section config.Embedding, query string) ([]float32, error) {
-	key := strings.ToLower(strings.Join(strings.Fields(query), " "))
+	// The prefix is in the key: a vector made with one prefix is not the
+	// answer to the same query asked with another.
+	key := section.QueryPrefix + "\x00" + strings.ToLower(strings.Join(strings.Fields(query), " "))
 
 	ix.mu.Lock()
 	if vector, ok := ix.queries[key]; ok {
@@ -345,7 +334,7 @@ func (ix *Indexer) queryVector(ctx context.Context, section config.Embedding, qu
 	}
 	ix.mu.Unlock()
 
-	vectors, err := embedding.New(section).Embed(ctx, []string{query})
+	vectors, err := embedding.New(section).Embed(ctx, []string{section.QueryPrefix + query})
 	if err != nil {
 		return nil, err
 	}

@@ -57,7 +57,7 @@ startup:
 embedding:
   enabled: false
   timeout: 15s
-  minSimilarity: 0.35
+  minSimilarity: 0.45
 mcpServers: {}
 ```
 
@@ -196,7 +196,15 @@ gateway:
 | `apiKey`  | *(空)*   | 以 `Authorization: Bearer` 发送；同机的服务可以留空 |
 | `model`   | *(空)*   | 嵌入模型名。要能读目录使用的所有语言：中英混合的目录配只认英文的模型，中文查询仍然落空 |
 | `timeout` | `15s`    | 单个嵌入请求的上限                           |
-| `minSimilarity` | `0.35` | 语义排序的相似度门槛：低于它的工具完全不参与语义排序，目录里没有的东西因此仍可能得到空结果。余弦的数值取决于模型，没有通用值，默认只是折中，开启后可以对着搜索结果调 |
+| `minSimilarity` | `0.45` | 语义排序的相似度门槛：低于它的工具完全不参与语义排序，目录里没有的东西因此仍可能得到空结果。余弦的数值取决于模型，没有通用值。默认值是用 embed-v4.0 在测试语料上测出来的：和查询无关的工具能到 0.40 左右，门槛低于这个数，它们会把名字正对查询的工具挤下第一位。换模型后可以对着搜索结果调 |
+| `queryPrefix` | *(空)* | 嵌入每条查询之前加在前面的文字 |
+| `documentPrefix` | *(空)* | 嵌入每个工具的文本之前加在前面的文字；改动后下一轮会重建整个索引 |
+
+很多检索模型在训练时给查询和文档各加了一个标记，不带标记时排序明显变差：e5 系列
+是 `queryPrefix: "query: "`、`documentPrefix: "passage: "`；Qwen3-Embedding 只要求
+查询带一行指令，例如 `queryPrefix: "Instruct: Given a request, find the tool that can
+fulfil it\nQuery: "`，文档不加。模型需要什么前缀以它自己的说明为准；不需要前缀的
+模型（OpenAI 的 text-embedding 系列等）两项都留空。
 
 接口按 OpenAI 的 embeddings API 设计，Ollama、OpenAI 与各类兼容网关都能接。
 打开 `enabled` 之前先在设置页填好并测试：测试会发一段样例文本，回报延迟与向量

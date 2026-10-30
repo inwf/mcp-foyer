@@ -255,6 +255,19 @@ type Embedding struct {
 	// of them; the default is a middle guess to be tuned against the
 	// directory actually in use.
 	MinSimilarity float64 `yaml:"minSimilarity"`
+
+	// QueryPrefix and DocumentPrefix are written in front of every query
+	// and every tool text before they are embedded. Many retrieval models
+	// are trained with one marker on the question and another on the
+	// passage — "query: " and "passage: " for e5, an instruction line for
+	// Qwen3-Embedding — and score noticeably worse without them. Which
+	// prefixes a model wants is in its own documentation; models that want
+	// none leave both empty, which is the default.
+	//
+	// Changing the document prefix changes every tool's text, so the index
+	// is rebuilt on the next round.
+	QueryPrefix    string `yaml:"queryPrefix,omitempty"`
+	DocumentPrefix string `yaml:"documentPrefix,omitempty"`
 }
 
 // MCPServer is one upstream MCP server. Which fields apply depends on

@@ -49,5 +49,10 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    // The settings page renders every antd form control there is, and a
+    // test that types into it takes four to five seconds on its own; with
+    // every test file running in parallel the same test took eight. The
+    // default of five seconds failed those tests on load, not on behaviour.
+    testTimeout: 20_000,
   },
 });

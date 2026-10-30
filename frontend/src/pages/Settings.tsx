@@ -77,6 +77,10 @@ interface FormValues {
    *  an empty string when there is none, or whatever was just typed. */
   embeddingApiKey: string;
   embeddingModel: string;
+  /** Sent as typed, spaces included: "query: " and "query:" are two
+   *  different prefixes to a model. */
+  embeddingQueryPrefix: string;
+  embeddingDocumentPrefix: string;
 }
 
 function valuesFrom(config: Config): FormValues {
@@ -111,6 +115,8 @@ function valuesFrom(config: Config): FormValues {
     embeddingURL: config.embedding.url ?? '',
     embeddingApiKey: config.embedding.apiKey ?? '',
     embeddingModel: config.embedding.model ?? '',
+    embeddingQueryPrefix: config.embedding.queryPrefix ?? '',
+    embeddingDocumentPrefix: config.embedding.documentPrefix ?? '',
   };
 }
 
@@ -174,6 +180,10 @@ function applyTo(config: Config, values: FormValues): Config {
       // anything else is a key someone just typed.
       apiKey: values.embeddingApiKey.trim(),
       model: values.embeddingModel.trim(),
+      // Not trimmed: the trailing space of "query: " is part of what the
+      // model was trained on.
+      queryPrefix: values.embeddingQueryPrefix,
+      documentPrefix: values.embeddingDocumentPrefix,
     },
   };
 }
@@ -585,6 +595,20 @@ function SettingsForm({
             >
               {/* 不遮成密码框：占位符是有含义的文本，需要被看见。 */}
               <Input className="mono" autoComplete="off" />
+            </Form.Item>
+            <Form.Item
+              name="embeddingQueryPrefix"
+              label={t('settings.embeddingQueryPrefix')}
+              extra={t('settings.embeddingQueryPrefixHint')}
+            >
+              <Input className="mono" placeholder="query: " />
+            </Form.Item>
+            <Form.Item
+              name="embeddingDocumentPrefix"
+              label={t('settings.embeddingDocumentPrefix')}
+              extra={t('settings.embeddingDocumentPrefixHint')}
+            >
+              <Input className="mono" placeholder="passage: " />
             </Form.Item>
             <EmbeddingProbe />
             <EmbeddingIndexStatus />

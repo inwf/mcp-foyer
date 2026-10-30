@@ -165,6 +165,28 @@ type Semantics interface {
 	Similarities(ctx context.Context, query string, candidates []Searchable) []float32
 }
 
+// EmbeddingText is the text a tool is embedded as: the same fields a
+// lexical search matches, joined, skipping the empty ones — and the
+// handshake title when it merely repeats the server name, which is what
+// an upstream that never named itself produces. The index builds its
+// documents with it, and the ranking tests embed their corpus with it, so
+// the vectors a test measures are the ones a deployment would hold.
+func EmbeddingText(c Searchable) string {
+	title := c.ServerTitle
+	if title == c.Server {
+		title = ""
+	}
+	parts := []string{c.Server, title, c.ServerDescription, c.Tool, c.Description, c.Arguments}
+
+	kept := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			kept = append(kept, part)
+		}
+	}
+	return strings.Join(kept, " ")
+}
+
 // searchCandidates answers both questions from one index, for the caller
 // that asks both.
 func searchCandidates(query string, candidates []Searchable, limit int) ([]SearchHit, []string) {

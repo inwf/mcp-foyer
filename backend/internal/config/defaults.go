@@ -76,8 +76,13 @@ func Default() Config {
 			// is answering, short enough that a dead one is noticed
 			// rather than waited on.
 			Timeout: 15 * time.Second,
-			// A middle guess, for the reason given on the field.
-			MinSimilarity: 0.35,
+			// Measured on the search corpus with embed-v4.0: tools unrelated
+			// to a short query reach 0.40 to 0.42, and at 0.35 they outranked
+			// the tool named for the query twice in 34 rows; at 0.45 the
+			// fused ranking puts the intended tool first as often as the
+			// words do. Another model needs its own value, for the reason
+			// given on the field.
+			MinSimilarity: 0.45,
 		},
 
 		MCPServers: map[string]MCPServer{},

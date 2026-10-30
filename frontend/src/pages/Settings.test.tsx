@@ -230,6 +230,31 @@ describe('the settings form', () => {
     });
   });
 
+  // The trailing space is part of the prefix a model was trained on;
+  // trimming it on the way back would quietly change every vector.
+  it('sends the embedding prefixes back exactly as written', async () => {
+    const saved = editing({
+      ...CONFIG,
+      embedding: {
+        enabled: true,
+        url: 'https://api.example.com/v1',
+        model: 'multilingual-e5-large',
+        timeout: '15s',
+        minSimilarity: 0.35,
+        queryPrefix: 'query: ',
+        documentPrefix: 'passage: ',
+      },
+    });
+
+    expect(await screen.findByDisplayValue('query:')).toBeInTheDocument();
+    await save();
+
+    await waitFor(() => expect(saved.body).toBeDefined());
+    expect(saved.body?.config).toMatchObject({
+      embedding: { queryPrefix: 'query: ', documentPrefix: 'passage: ' },
+    });
+  });
+
   it('turns the embedding model on', async () => {
     const saved = editing();
 
