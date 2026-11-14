@@ -18,6 +18,7 @@ body {
   font-size: var(--text-base);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
 }
 
@@ -74,4 +75,25 @@ select {
 ::selection {
   background: var(--selection);
   color: var(--ink);
+}
+
+/* 行内操作需要与列表文字使用一致的图标尺寸。 */
+.ant-btn .anticon {
+  font-size: 16px;
+}
+
+/* 键盘焦点留在滚动容器内，避免被面板边界裁切。 */
+.ant-table-row:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.ant-table-row-selected > td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ant-skeleton * {
+    animation: none !important;
+  }
 }

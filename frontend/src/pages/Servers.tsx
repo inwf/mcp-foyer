@@ -102,7 +102,7 @@ export default function Servers() {
     {
       title: t('servers.status'),
       key: 'status',
-      width: 130,
+      width: 136,
       render: (_, server) => (
         <StateBadge
           state={server.status.state}
@@ -114,7 +114,7 @@ export default function Servers() {
     {
       title: t('servers.transport'),
       key: 'transport',
-      width: 190,
+      width: 192,
       render: (_, server) => (
         <span className={styles.name}>
           <span className={styles.transport}>{server.config.transport}</span>
@@ -127,7 +127,7 @@ export default function Servers() {
     {
       title: `${t('servers.tools')} / ${t('servers.resources')}`,
       key: 'counts',
-      width: 110,
+      width: 112,
       render: (_, server) => (
         <span className={styles.counts}>
           <span className={cx(server.status.toolCount === 0 && styles.countZero)}>
@@ -143,7 +143,7 @@ export default function Servers() {
     {
       title: t('servers.actions'),
       key: 'actions',
-      width: 190,
+      width: 192,
       align: 'right',
       render: (_, server) => {
         const live = server.status.state === 'connected';

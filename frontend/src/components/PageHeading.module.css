@@ -5,7 +5,7 @@
   justify-content: space-between;
   gap: var(--space-4);
   flex: none;
-  padding: 2px 0 var(--space-2);
+  padding: 0 0 var(--space-2);
 }
 
 .text {
@@ -15,14 +15,14 @@
 .title {
   margin: 0;
   color: var(--ink);
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: -0.035em;
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0;
 }
 
 .description {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   color: var(--ink-muted);
   font-size: var(--text-sm);
 }
@@ -36,6 +36,6 @@
 
 @media (max-width: 600px) {
   .title {
-    font-size: 23px;
+    font-size: 28px;
   }
 }

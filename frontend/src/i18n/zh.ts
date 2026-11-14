@@ -42,16 +42,16 @@ export const zh = {
 
   overview: {
     title: '总览',
-    description: '上游连接、工具与会话，一眼了解 mcp-foyer 的运行状态。',
+    description: '查看 MCP 上游连接、可用工具与客户端会话',
     metrics: '运行统计',
     upstreams: '上游服务器',
     manageServers: '管理服务器',
     viewAll: '查看全部',
     connectClient: '接入客户端',
-    connectHint: '在 MCP 客户端中选择 Streamable HTTP，使用下方地址连接。',
+    connectHint: '在 MCP 客户端中选择 Streamable HTTP，填入下方地址',
     endpoint: 'MCP 接入地址',
     copyEndpoint: '复制地址',
-    endpointHint: '客户端只需配置这个入口，即可使用 mcp-foyer 提供的工具。',
+    endpointHint: '一个入口，访问 mcp-foyer 提供的全部工具',
     toolsHint: '客户端可发现',
     failureCount: '{{count}} 台连接失败',
     viewLogs: '查看日志',
@@ -84,7 +84,7 @@ export const zh = {
 
   servers: {
     title: '服务器',
-    description: '管理上游连接，查看每台服务器提供的工具与资源。',
+    description: '管理上游连接，查看每台服务器的工具与资源',
     filterStatus: '按连接状态筛选',
     inventory: '连接列表',
     noMatch: '没有匹配的服务器',
@@ -204,7 +204,7 @@ export const zh = {
     enableTool: '启用工具',
     disabled: '已禁用',
     title: '工具',
-    description: '按服务器浏览工具，调整暴露范围，或直接发起调用。',
+    description: '按服务器查找工具，设置客户端可见范围并测试调用',
     name: '工具名称',
     upstreamName: '上游名称',
     summary: '说明',
@@ -260,8 +260,8 @@ export const zh = {
 
   resources: {
     title: '资源',
-    description: '浏览上游提供的资源，选择一项查看内容。',
-    search: '搜索名称或资源 URI',
+    description: '浏览上游资源，选择一项查看内容',
+    search: '搜索资源',
     empty: '没有可用的资源',
     emptyHint: '并非所有 MCP 服务器都提供资源',
     uri: '标识',
@@ -272,7 +272,7 @@ export const zh = {
 
   logs: {
     title: '日志',
-    description: '按级别、模块和服务器筛选，追踪运行记录。',
+    description: '按级别、模块和服务器筛选运行记录',
     stream: '日志记录',
     level: '级别',
     module: '模块',
@@ -295,12 +295,12 @@ export const zh = {
 
   settings: {
     title: '设置',
-    description: '调整监听地址、访问规则与运行参数。',
+    description: '配置 MCP 端点、访问规则与运行参数',
     listenHint: 'mcp-foyer 对外提供服务的地址。修改后需要重启生效。',
-    loggingHint: '控制记录哪些信息，以及日志文件的保留方式。',
-    securityHint: '设置允许访问的来源，以及连接和并发限制。',
-    gatewayHint: '管理客户端会话、通知与连接保活。',
-    startupHint: '设置上游启动时的连接间隔和失败重试。',
+    loggingHint: '选择日志内容与文件保留方式',
+    securityHint: '设置访问来源、连接与并发限制',
+    gatewayHint: '管理客户端会话、通知与连接保活',
+    startupHint: '设置上游连接间隔和失败重试',
     unsaved: '有未保存的修改',
     form: '表单',
     yaml: 'YAML',

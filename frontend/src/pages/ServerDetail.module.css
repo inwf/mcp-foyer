@@ -15,8 +15,8 @@
 .back {
   display: inline-grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--ink-muted);
@@ -34,8 +34,7 @@
   margin: 0;
   font-family: var(--font-mono);
   font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 500;
 }
 
 .spacer {
@@ -50,7 +49,7 @@
 
 .fact {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -72,7 +71,7 @@
 }
 
 .cap {
-  padding: 1px 7px;
+  padding: 4px 8px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
@@ -123,7 +122,7 @@
   align-items: baseline;
   justify-content: space-between;
   width: 100%;
-  padding: 9px var(--space-4);
+  padding: 12px var(--space-4);
   border: 0;
   border-bottom: 1px solid var(--line);
   border-left: 2px solid transparent;
@@ -162,6 +161,7 @@
   justify-content: space-between;
   min-width: 0;
   padding: 0;
+  border-radius: var(--radius-sm);
   border: 0;
   background: transparent;
   color: inherit;
@@ -177,8 +177,16 @@
 
 .toolOn {
   border-left-color: var(--accent);
-  background: var(--accent-dim);
-  color: var(--accent);
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.toolOn:hover {
+  background: var(--raised);
+}
+
+.toolRow:focus-within {
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 .schema {
