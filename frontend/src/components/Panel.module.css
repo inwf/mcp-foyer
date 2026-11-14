@@ -13,8 +13,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 57px;
-  padding: 14px 20px;
+  min-height: 56px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -42,7 +42,7 @@
 
 .arrow {
   flex: none;
-  font-size: 10px;
+  font-size: 16px;
   color: var(--ink-faint);
   transition: transform var(--fast) var(--ease);
 }
@@ -58,16 +58,15 @@
   margin: 0;
   color: var(--ink);
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
 .count {
-  padding: 0 6px;
-  border-radius: var(--radius-sm);
-  background: var(--raised);
+  padding: 0 4px;
   color: var(--ink-muted);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   line-height: 20px;
 }

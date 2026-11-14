@@ -10,7 +10,7 @@
   flex-direction: column;
   gap: var(--space-6);
   min-height: 0;
-  padding: 25px 14px 18px;
+  padding: 24px 16px;
   border-right: 1px solid var(--line);
   background: var(--sidebar);
 }
@@ -18,8 +18,8 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 10px;
+  gap: 12px;
+  padding: 0 8px;
   color: var(--ink);
   text-decoration: none;
 }
@@ -28,7 +28,7 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 34px;
+  width: 36px;
   height: 36px;
   border-radius: var(--radius);
   background: var(--ink);
@@ -36,26 +36,26 @@
 }
 
 .wordmark {
-  font-size: 20px;
-  font-weight: 650;
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1.15;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
 }
 
 .wordmark > span {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
 }
 
 .navigation {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   min-height: 0;
   overflow-y: auto;
 }
@@ -63,18 +63,19 @@
 .groupLabel {
   margin: 0 12px 8px;
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 40px;
-  padding: 9px 12px;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 12px;
   border-radius: var(--radius);
   color: var(--ink-muted);
   font-size: var(--text-sm);
+  line-height: 20px;
   text-decoration: none;
   transition:
     background var(--fast) var(--ease),
@@ -83,6 +84,11 @@
 
 .itemIcon {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
   font-size: 16px;
 }
 
@@ -93,9 +99,14 @@
 
 .active,
 .active:hover {
-  background: var(--accent-dim);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-weight: 500;
+}
+
+.active .itemIcon {
   color: var(--accent);
-  font-weight: 600;
 }
 
 .spacer {
@@ -105,22 +116,22 @@
 
 .instance {
   display: grid;
-  gap: 5px;
-  margin: 0 10px;
+  gap: 4px;
+  margin: 0 8px;
   padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
 
 .instanceLabel {
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .host {
   overflow: hidden;
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -161,7 +172,7 @@
 
 .divider {
   width: 1px;
-  height: 18px;
+  height: 20px;
   background: var(--line);
 }
 
@@ -182,15 +193,15 @@
 .connection {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   color: var(--ink-muted);
   font-size: var(--text-xs);
   white-space: nowrap;
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
 }
 
@@ -221,7 +232,7 @@
 
 @media (max-width: 1100px) {
   .shell {
-    grid-template-columns: 184px minmax(0, 1fr);
+    grid-template-columns: 240px minmax(0, 1fr);
   }
   .content {
     padding: var(--space-5);
@@ -239,7 +250,7 @@
 
   .sidebar {
     grid-row: 2;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);
     border-right: 0;
   }
@@ -254,7 +265,7 @@
   .navigation {
     flex-direction: row;
     justify-content: space-around;
-    gap: 3px;
+    gap: 4px;
     overflow: visible;
   }
 
@@ -262,23 +273,24 @@
     flex: 1;
     flex-direction: column;
     gap: 4px;
-    padding: 7px 4px;
-    font-size: 10px;
+    min-height: 48px;
+    padding: 8px 4px;
+    font-size: 11px;
     line-height: 1.3;
   }
 
   .itemIcon {
-    font-size: 18px;
+    font-size: 16px;
   }
   .content {
-    padding: 22px 16px;
+    padding: 24px 16px;
   }
   .topbar {
     padding-inline: var(--space-4);
     gap: 8px;
   }
   .topbarRight {
-    gap: 10px;
+    gap: 8px;
   }
   .divider {
     display: none;

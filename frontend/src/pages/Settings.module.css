@@ -45,12 +45,12 @@
   margin: 0 0 8px;
   color: var(--ink);
   font-size: var(--text-base);
-  font-weight: 600;
+  font-weight: 500;
 }
 .sectionIntro p {
   margin: 0;
   color: var(--ink-faint);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   line-height: 1.8;
 }
 .sectionBody {
@@ -227,12 +227,15 @@
     gap: var(--space-5);
   }
   .actions {
-    bottom: -22px;
+    bottom: -24px;
   }
 }
 
 @media (max-width: 480px) {
   .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .previewColumns {
     grid-template-columns: minmax(0, 1fr);
   }
 }

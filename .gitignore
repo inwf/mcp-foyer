@@ -11,6 +11,7 @@ backend/cmd/mcp-foyer-eval/
 
 # ===== Scratch space for intermediate results (never /tmp; see AGENTS.md) =====
 scratch/
+unslop-story/.story-frames/
 
 # ===== Claude Code local state =====
 .claude/

@@ -1,0 +1,56 @@
+/* Unslop by Damir Sokolovsky (@heydamir), CC BY 4.0.
+   MCP Foyer 的四个精修步骤；发布界面使用 frontend/src 中的正常样式。 */
+
+/* Spacing */
+.s1 { --sidebar-width: 240px; }
+.s1 [class*='_sidebar_'] { padding: 24px 16px; }
+.s1 [class*='_brand_'] { gap: 12px; padding: 0 8px; }
+.s1 [class*='_symbol_'] { width: 36px; }
+.s1 [class*='_navigation_'] { gap: 4px; }
+.s1 [class*='_item_'] { gap: 8px; min-height: 36px; padding: 8px 12px; line-height: 20px; }
+.s1 [class*='_instance_'] { gap: 4px; margin: 0 8px; }
+.s1 [class*='_header_'] { padding: 0 0 8px; }
+.s1 [class*='_description_'] { margin-top: 8px; }
+.s1 [class*='_head_'] { min-height: 56px; padding: 16px 20px; }
+.s1 [class*='_row_'] { min-height: 64px; padding: 16px 20px; }
+.s1 [class*='_listHead_'] { min-height: 36px; }
+.s1 [class*='_connection_'] { gap: 8px; }
+.s1 .ant-select { min-width: 176px !important; }
+
+/* Color and icons */
+.s2 [class*='_active_'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.s2 [class*='_active_'] [class*='_itemIcon_'] { color: var(--accent); }
+.s2 [class*='_itemIcon_'] { width: 16px; height: 16px; align-items: center; justify-content: center; }
+.s2 [class*='_count_'] { padding: 0 4px; background: transparent; }
+.s2 [class*='_rowOff_'] { background: var(--sunken); }
+.s2 [class*='_dot_'] { width: 8px; height: 8px; }
+.s2 [class*='_arrow_'], .s2 .ant-btn .anticon { font-size: 16px; }
+
+/* Type and copy */
+.s3 { --text-sm: 0.875rem; }
+.s3 body { font-variant-numeric: tabular-nums; }
+.s3 [class*='_wordmark_'] { font-size: 18px; font-weight: 600; letter-spacing: 0; }
+.s3 [class*='_wordmark_'] > span { margin-top: 4px; font-size: 12px; letter-spacing: 0; }
+.s3 [class*='_title_']:is(h1) { font-size: 32px; font-weight: 500; line-height: 1.25; letter-spacing: 0; }
+.s3 [class*='_heading_'] { font-weight: 500; }
+.s3 [class*='_active_'] { font-weight: 500; }
+.s3 [class*='_rowName_'], .s3 [class*='_rowDescription_'] { font-size: var(--text-sm); }
+.s3 [class*='_groupLabel_'], .s3 [class*='_instanceLabel_'],
+.s3 [class*='_host_'], .s3 [class*='_mark_'], .s3 [class*='_count_'],
+.s3 [class*='_rowOrigin_'], .s3 [class*='_usage_'], .s3 [class*='_listHead_'],
+.s3 [class*='_badge_'] { font-size: 12px; }
+.s3 [class*='_count_'] { font-family: var(--font-mono); }
+
+/* Details */
+.s4 { --radius: 8px; --radius-lg: 12px; }
+.s4 [class*='_badge_'] { gap: 8px; padding: 2px 8px; }
+.s4 .ant-btn { border-radius: 8px; font-weight: 500; }
+.s4 .ant-btn-sm { height: 28px; }
+.s4 .ant-input-affix-wrapper { min-height: 36px; border-radius: 8px; }
+.s4 .ant-select { min-height: 36px; border-radius: 8px; }
+.s4 .ant-segmented { border-radius: 8px; }
+.s4 .ant-segmented-item { border-radius: 4px; }

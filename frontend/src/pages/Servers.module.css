@@ -7,6 +7,7 @@
 .bar {
   display: flex;
   flex-wrap: wrap;
+  min-width: 0;
   justify-content: space-between;
   gap: var(--space-3);
   align-items: center;
@@ -18,15 +19,17 @@
 }
 .filters {
   display: flex;
-  gap: 3px;
+  max-width: 100%;
+  gap: 4px;
   overflow-x: auto;
 }
 
 .filter {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 10px;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 12px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
@@ -48,11 +51,11 @@
   border-color: var(--line);
   background: var(--surface);
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 500;
 }
 .filterCount {
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 400;
 }
@@ -62,7 +65,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin-top: -10px;
+  margin-top: -8px;
 }
 .filterSummary {
   margin-right: auto;
@@ -79,7 +82,7 @@
 .nameLink {
   color: var(--ink);
   font-size: var(--text-sm);
-  font-weight: 550;
+  font-weight: 500;
   text-decoration: none;
   overflow-wrap: anywhere;
 }
@@ -90,19 +93,19 @@
   max-width: 250px;
   overflow: hidden;
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .endpoint {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-faint);
 }
 .transport {
   width: fit-content;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-muted);
 }
 .counts {
@@ -110,6 +113,7 @@
   gap: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 .countZero,
@@ -120,7 +124,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 3px;
+  gap: 4px;
 }
 .emptyActions {
   display: inline-flex;

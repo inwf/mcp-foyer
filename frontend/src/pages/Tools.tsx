@@ -610,7 +610,7 @@ export default function Tools() {
           aria-label={t('logs.server')}
           value={server}
           onChange={setServer}
-          style={{ minWidth: 170 }}
+          style={{ minWidth: 176 }}
           options={[
             { label: `${t('logs.server')}: ${t('logs.all')}`, value: '' },
             ...groups.map((group) => ({ label: group.server, value: group.server })),
