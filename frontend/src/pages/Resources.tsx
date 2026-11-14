@@ -187,7 +187,7 @@ export default function Resources() {
             next.delete('uri');
             setParams(next, { replace: true });
           }}
-          style={{ minWidth: 170 }}
+          style={{ minWidth: 176 }}
           options={[
             { label: `${t('logs.server')}: ${t('logs.all')}`, value: '' },
             ...servers.map((value) => ({ label: value, value })),

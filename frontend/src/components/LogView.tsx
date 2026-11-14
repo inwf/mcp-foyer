@@ -137,7 +137,7 @@ export function LogView({
           aria-label={t('logs.module')}
           value={module}
           onChange={setModule}
-          style={{ minWidth: 130 }}
+          style={{ minWidth: 136 }}
           options={[
             { label: `${t('logs.module')}: ${t('logs.all')}`, value: '' },
             ...LOG_MODULES.map((value) => ({ label: value, value })),
@@ -149,7 +149,7 @@ export function LogView({
             aria-label={t('logs.server')}
             value={pickedServer}
             onChange={setPickedServer}
-            style={{ minWidth: 150 }}
+            style={{ minWidth: 152 }}
             options={[
               { label: `${t('logs.server')}: ${t('logs.all')}`, value: '' },
               ...(logs.data?.servers ?? []).map((value) => ({ label: value, value })),
@@ -161,7 +161,7 @@ export function LogView({
           aria-label={t('logs.limit')}
           value={limit}
           onChange={setLimit}
-          style={{ minWidth: 110 }}
+          style={{ minWidth: 112 }}
           options={[200, 500, 1000, 2000].map((value) => ({
             label: `${t('logs.limit')} ${value}`,
             value,

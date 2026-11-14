@@ -20,7 +20,7 @@
   gap: var(--space-5);
 }
 .catalog {
-  max-height: max(320px, calc(100dvh - 255px));
+  max-height: max(320px, calc(100dvh - 256px));
 }
 
 .row {
@@ -29,7 +29,7 @@
   align-items: baseline;
   gap: var(--space-3);
   width: 100%;
-  padding: 16px 18px;
+  padding: 16px 20px;
   border: 0;
   border-bottom: 1px solid var(--line);
   border-left: 2px solid transparent;
@@ -70,7 +70,7 @@
   overflow: hidden;
   color: var(--ink-faint);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -78,7 +78,7 @@
   max-width: 90px;
   overflow: hidden;
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -89,7 +89,7 @@
   margin-bottom: var(--space-4);
   color: var(--ink-faint);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
 }
 .resourceUri {
   width: 100%;

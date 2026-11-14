@@ -1,6 +1,6 @@
 .metric {
   min-width: 0;
-  padding: 23px 26px 21px;
+  padding: 24px;
 }
 
 .metric + .metric {
@@ -8,7 +8,7 @@
 }
 
 .label {
-  margin-bottom: 13px;
+  margin-bottom: 12px;
   color: var(--ink-muted);
   font-size: var(--text-xs);
 }
@@ -19,15 +19,15 @@
   font-size: 32px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
   line-height: 1;
 }
 
 .note {
-  min-height: 19px;
-  margin: 10px 0 0;
+  min-height: 20px;
+  margin: 12px 0 0;
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .ok {
@@ -42,7 +42,7 @@
 
 @media (max-width: 600px) {
   .metric {
-    padding: 18px 20px;
+    padding: 20px;
   }
   .metric:nth-child(3) {
     border-left: 0;

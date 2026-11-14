@@ -6,16 +6,16 @@
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 
   --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
+  --text-sm: 0.875rem;
   --text-base: 0.875rem;
   --text-lg: 1rem;
   --text-xl: 1.375rem;
   --text-2xl: 1.75rem;
 
   --radius-sm: 4px;
-  --radius: 6px;
-  --radius-lg: 8px;
-  --sidebar-width: 216px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --sidebar-width: 240px;
   --topbar-height: 56px;
 
   --space-1: 4px;
@@ -26,7 +26,7 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
   --fast: 120ms;
   --slow: 200ms;
