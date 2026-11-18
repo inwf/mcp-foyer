@@ -67,6 +67,7 @@ type Status struct {
 	// ServerName and ServerVersion come from the handshake and identify
 	// the far side, which is what tells you whether an upgrade landed.
 	ServerName      string `json:"serverName,omitempty"`
+	Description     string `json:"description,omitempty"`
 	ServerVersion   string `json:"serverVersion,omitempty"`
 	ProtocolVersion string `json:"protocolVersion,omitempty"`
 

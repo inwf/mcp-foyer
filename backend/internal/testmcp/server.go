@@ -166,8 +166,9 @@ func serve(mode string) int {
 // drift into testing a different thing from the other.
 func newServer(mode string) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{
-		Name:    ServerName,
-		Version: ServerVersion,
+		Name:        ServerName,
+		Version:     ServerVersion,
+		Description: "Echo messages and read greetings",
 	}, nil)
 
 	mcp.AddTool(server, &mcp.Tool{

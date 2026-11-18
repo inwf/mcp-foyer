@@ -74,7 +74,8 @@ type Gateway struct {
 	stateful  http.Handler
 	stateless http.Handler
 
-	mu sync.RWMutex
+	syncMu sync.Mutex
+	mu     sync.RWMutex
 	// names maps an exposed tool name to the upstream tool it forwards
 	// to. Handlers consult it at call time rather than capturing it,
 	// because it is replaced whenever upstreams change.
@@ -94,8 +95,7 @@ type Gateway struct {
 	// systemTools is the gateway's own tools, as the server actually
 	// publishes them. See [Gateway.SystemTools] for why they are read
 	// back rather than kept from registration.
-	systemToolsOnce sync.Once
-	systemTools     []*mcp.Tool
+	systemTools []*mcp.Tool
 
 	// internal tracks what the gateway knows about its own sessions that
 	// the SDK does not report: which are the gateway talking to itself, and
@@ -154,7 +154,11 @@ func New(opts Options) *Gateway {
 	// first caller to want it would be a request handler already running on
 	// it — one round trip taken here is one that never happens from inside a
 	// handler.
-	g.SystemTools()
+	tools, err := g.readBackSystemTools()
+	if err != nil {
+		panic(fmt.Errorf("read registered system tools: %w", err))
+	}
+	g.systemTools = tools
 
 	if opts.WireDebug {
 		g.installWireLogging()
@@ -254,6 +258,9 @@ func (g *Gateway) Watch(ctx context.Context, bus *events.Bus) {
 // unchanged tool would tell every connected client to refetch for
 // nothing.
 func (g *Gateway) Sync() {
+	g.syncMu.Lock()
+	defer g.syncMu.Unlock()
+	g.syncSearchDescription()
 	aggregate := BuildAggregate(g.collectTools())
 
 	current := make(map[string]string, len(aggregate.Tools))

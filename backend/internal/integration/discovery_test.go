@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -28,6 +29,45 @@ func discoveryStack(t *testing.T) *stack {
 	remote.URL = httpServer.URL
 	remote.ExposedTools = []string{"echo"}
 	return startConfigured(t, map[string]config.MCPServer{"stdio": stdio, "http": remote})
+}
+
+func TestSearchToolAdvertisesUpstreamCapabilitiesAndTracksConfigurationEdits(t *testing.T) {
+	s := discoveryStack(t)
+	session := s.connect(t)
+	description := func() string {
+		for tool, err := range session.Tools(t.Context(), nil) {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tool.Name == gateway.ToolSearchTools {
+				return tool.Description
+			}
+		}
+		t.Fatal("search_tools missing")
+		return ""
+	}
+	if got := description(); !strings.Contains(got, "stdio (Echo messages and read greetings)") {
+		t.Fatalf("handshake description missing: %s", got)
+	}
+	_, err := s.Configs.Update(func(cfg *config.Config) error {
+		server := cfg.MCPServers["stdio"]
+		server.Description = "查找内部文档"
+		cfg.MCPServers["stdio"] = server
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Gateway.Sync()
+	got := description()
+	if !strings.Contains(got, "stdio (查找内部文档)") || strings.Contains(got, "stdio (Echo") {
+		t.Fatalf("updated description missing: %s", got)
+	}
+	var details struct{ Description string }
+	callDiscovery(t, session, gateway.ToolGetToolDetails, map[string]any{"server": gateway.Name, "tool": gateway.ToolSearchTools}, &details)
+	if details.Description != got {
+		t.Fatal("tool details and tools/list disagree")
+	}
 }
 
 func TestDiscoveryAndCallsPreserveBusinessTagsOverBothUpstreamTransports(t *testing.T) {

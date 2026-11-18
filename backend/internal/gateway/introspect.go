@@ -214,20 +214,11 @@ func (g *Gateway) withInternalSession(ctx context.Context, fn func(*mcp.ClientSe
 // an internal code path). Asking the server is the only answer that cannot
 // be wrong.
 //
-// One round trip is enough for the lifetime of the gateway: the system
-// tools are registered once in [New] and never change afterwards, unlike
-// the forwarded tools that [Gateway.Sync] maintains.
+// The schemas are read at registration. Sync updates the search tool's
+// description when the upstream directory changes.
 func (g *Gateway) SystemTools() []*mcp.Tool {
-	g.systemToolsOnce.Do(func() {
-		tools, err := g.readBackSystemTools()
-		if err != nil {
-			// A gateway that cannot describe its own tools still forwards
-			// everything else, so this is degraded rather than fatal.
-			g.log.Error("could not read back mcp-foyer's own tools", "error", err)
-			return
-		}
-		g.systemTools = tools
-	})
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	return slices.Clone(g.systemTools)
 }
 

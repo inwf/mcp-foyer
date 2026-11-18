@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -580,9 +581,14 @@ func (c *Conn) refreshInBackground(refresh func(context.Context) error, what str
 func (c *Conn) applyHandshakeLocked(init *mcp.InitializeResult, cmd *exec.Cmd) {
 	if init != nil {
 		c.status.ProtocolVersion = init.ProtocolVersion
+		c.status.Description = ""
 		if init.ServerInfo != nil {
+			c.status.Description = strings.TrimSpace(init.ServerInfo.Description)
 			c.status.ServerName = init.ServerInfo.Name
 			c.status.ServerVersion = init.ServerInfo.Version
+		}
+		if c.status.Description == "" {
+			c.status.Description, _, _ = strings.Cut(strings.TrimSpace(init.Instructions), "\n")
 		}
 		caps := capabilities(init)
 		c.status.HasTools = caps.tools

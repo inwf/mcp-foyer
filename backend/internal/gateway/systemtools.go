@@ -197,37 +197,7 @@ func RegisterSystemTools(server *mcp.Server, ups Upstreams, cfgs Configs, sem Se
 		return nil, listServers(ups, cfgs), nil
 	})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: ToolSearchTools,
-		Description: "Find tools on the servers behind this endpoint by describing the capability, or browse one server by giving " +
-			"server alone. Most tools are not in this tool list and are only reachable this way; every hit can then be called " +
-			"with call_tool(server, tool, args). Results are ranked best first, five per page by default, each hit naming " +
-			"the arguments the tool requires; includeSchema=true returns each hit's complete input schema so the call can " +
-			"be prepared from the same result. " +
-			"The query describes what a tool does; the particular thing to act on — a repository, a person, a file name — " +
-			"goes into call_tool's arguments, since no tool is named after it. " +
-			"Words that matched nothing are reported in unmatched; words too common to tell tools apart " +
-			"(the, what, my) are ignored, so a query made only of them comes back empty and names them. " +
-			"A query naming one server searches that server alone and reports it in server; " +
-			"a cross-server search spreads its hits, at most two per server unless only one matched; " +
-			"browse one server to see all it has. " +
-			"Servers that are not connected are named in unavailable, up to five, with unavailableMore counting the rest; " +
-			"browsing one gives the reason.",
-		Annotations: readOnly("Search tools"),
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in searchToolsInput) (*mcp.CallToolResult, searchToolsOutput, error) {
-		out, err := searchTools(ctx, ups, cfgs, sem, own, in)
-		if err != nil {
-			return toolError(err), searchToolsOutput{}, nil
-		}
-		// What the model saw is the page, not everything that matched.
-		// The gateway's own tools are not counted: they are always there.
-		if in.Server != Name {
-			for _, hit := range out.Hits {
-				use.Searched(hit.Server, hit.Tool)
-			}
-		}
-		return nil, out, nil
-	})
+	registerSearchTool(server, searchDescription(ups, cfgs), ups, cfgs, sem, own, use)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: ToolGetToolDetails,
