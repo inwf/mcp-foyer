@@ -287,6 +287,10 @@ type MCPServer struct {
 	// Timeout bounds a single request to this server.
 	Timeout time.Duration `yaml:"timeout"`
 
+	// IdleTimeout releases an unused session while retaining its catalog.
+	// Zero keeps the session open.
+	IdleTimeout time.Duration `yaml:"idleTimeout,omitempty"`
+
 	// Command, Args and Env apply to the stdio transport, which runs the
 	// server as a child process.
 	Command string            `yaml:"command,omitempty"`

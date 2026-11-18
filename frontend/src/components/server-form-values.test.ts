@@ -4,7 +4,7 @@ import type { MCPServer } from '@/api/types';
 
 const values: ServerFormValues = {
   name: 'files', transport: 'stdio', enabled: true, description: '',
-  timeout: '30s', command: 'node', args: [], env: {}, url: '',
+  timeout: '30s', idleTimeout: '', command: 'node', args: [], env: {}, url: '',
   headers: {}, proxy: '', exposedTools: [],
 };
 const original: MCPServer = {

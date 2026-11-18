@@ -24,8 +24,12 @@ export type Transport = (typeof TRANSPORTS)[number];
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
-export const SERVER_STATES = ['disconnected', 'connecting', 'connected', 'failed'] as const;
+export const SERVER_STATES = ['disconnected', 'connecting', 'connected', 'sleeping', 'failed'] as const;
 export type ServerState = (typeof SERVER_STATES)[number];
+
+export function serverAvailable(state: ServerState): boolean {
+  return state === 'connected' || state === 'sleeping';
+}
 
 export type SessionMode = 'stateful' | 'stateless';
 
@@ -36,6 +40,7 @@ export interface MCPServer {
   enabled: boolean;
   description?: string;
   timeout: Duration;
+  idleTimeout?: Duration;
 
   /** For stdio, which runs the server as a child process. */
   command?: string;

@@ -246,7 +246,7 @@ func (m *Manager) KeepConnected(ctx context.Context, policy RetryPolicy) {
 	m.supervising = true
 	stale := make([]string, 0, len(m.desired))
 	for name := range m.desired {
-		if conn, ok := m.conns[name]; ok && !conn.Status().Connected() {
+		if conn, ok := m.conns[name]; ok && !conn.Status().Available() {
 			stale = append(stale, name)
 		}
 	}
@@ -298,7 +298,7 @@ func (m *Manager) reconnect(ctx context.Context, name string, policy RetryPolicy
 		if !ok {
 			return
 		}
-		if err := conn.Connect(ctx); err == nil && conn.Status().Connected() {
+		if err := conn.Connect(ctx); err == nil && conn.Status().Available() {
 			return
 		}
 	}
@@ -331,7 +331,7 @@ func (m *Manager) failedAndWanted(name string) bool {
 		return false
 	}
 	conn, ok := m.Get(name)
-	return ok && !conn.Status().Connected()
+	return ok && !conn.Status().Available()
 }
 
 // Get returns the connection for a name.

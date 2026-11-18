@@ -17,6 +17,7 @@ import {
 import { endpoints } from '@/api/endpoints';
 import { keys } from '@/api/query';
 import type { ServerState, ServerView } from '@/api/types';
+import { serverAvailable } from '@/api/types';
 import { useServerActions } from '@/hooks/use-server-actions';
 import { IconButton } from '@/components/IconButton';
 import { Panel } from '@/components/Panel';
@@ -35,6 +36,7 @@ import styles from './Servers.module.css';
 const FILTERS: Array<'all' | ServerState> = [
   'all',
   'connected',
+  'sleeping',
   'connecting',
   'failed',
   'disconnected',
@@ -146,7 +148,7 @@ export default function Servers() {
       width: 192,
       align: 'right',
       render: (_, server) => {
-        const live = server.status.state === 'connected';
+        const live = serverAvailable(server.status.state);
         const busy =
           (connect.isPending && connect.variables === server.name) ||
           (disconnect.isPending && disconnect.variables === server.name);

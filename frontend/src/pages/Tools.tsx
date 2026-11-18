@@ -15,7 +15,7 @@ import {
 import { SearchOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { endpoints } from '@/api/endpoints';
 import { keys } from '@/api/query';
-import type { AggregatedTool, ServerView, Tool, UsageEntry } from '@/api/types';
+import { serverAvailable, type AggregatedTool, type ServerView, type Tool, type UsageEntry } from '@/api/types';
 import { Panel } from '@/components/Panel';
 import { PageHeading } from '@/components/PageHeading';
 import { StateBadge } from '@/components/StateBadge';
@@ -190,7 +190,7 @@ function emptyHint(
   const { config, status } = view;
   if (!config.enabled) return t('tools.groupDisabled');
   if (status.state === 'failed') return t('tools.groupFailed');
-  if (status.state !== 'connected') return t('tools.groupOffline');
+  if (!serverAvailable(status.state)) return t('tools.groupOffline');
   if (!status.hasTools) return t('tools.groupNoCapability');
   return t('tools.groupNoTools');
 }

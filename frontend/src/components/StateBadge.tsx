@@ -6,6 +6,7 @@ import styles from './StateBadge.module.css';
 
 const CLASS: Record<ServerState, string | undefined> = {
   connected: styles.connected,
+  sleeping: styles.disconnected,
   connecting: styles.connecting,
   failed: styles.failed,
   disconnected: styles.disconnected,

@@ -28,6 +28,9 @@ const (
 	// usable.
 	StateConnected State = "connected"
 
+	// StateSleeping retains the catalog and reconnects when a request needs it.
+	StateSleeping State = "sleeping"
+
 	// StateFailed means a connection attempt did not succeed, or a
 	// working connection dropped.
 	StateFailed State = "failed"
@@ -78,6 +81,8 @@ type Status struct {
 
 // Connected reports whether the server is usable right now.
 func (s Status) Connected() bool { return s.State == StateConnected }
+
+func (s Status) Available() bool { return s.Connected() || s.State == StateSleeping }
 
 // ChangeKind identifies what changed about an upstream server.
 type ChangeKind string

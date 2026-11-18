@@ -34,6 +34,7 @@ export interface ServerFormValues {
   enabled: boolean;
   description: string;
   timeout: string;
+  idleTimeout: string;
   command: string;
   args: string[];
   env: Record<string, string>;
@@ -50,6 +51,7 @@ function emptyValues(): ServerFormValues {
     enabled: true,
     description: '',
     timeout: '1m0s',
+    idleTimeout: '',
     command: '',
     args: [],
     env: {},
@@ -67,6 +69,7 @@ function valuesFrom(name: string, server: MCPServer): ServerFormValues {
     enabled: server.enabled,
     description: server.description ?? '',
     timeout: server.timeout,
+    idleTimeout: server.idleTimeout ?? '',
     command: server.command ?? '',
     args: server.args ?? [],
     env: server.env ?? {},
@@ -99,6 +102,7 @@ export function serverFrom(values: ServerFormValues, original?: MCPServer): MCPS
   };
 
   if (values.description.trim()) server.description = values.description.trim();
+  if (values.idleTimeout.trim()) server.idleTimeout = values.idleTimeout.trim();
   if (values.exposedTools.length) server.exposedTools = values.exposedTools;
 
   if (spawns) {
@@ -136,6 +140,7 @@ const FIELD_NAMES = [
   'enabled',
   'description',
   'timeout',
+  'idleTimeout',
   'command',
   'args',
   'env',
@@ -426,6 +431,14 @@ function FormBody({
           rules={[{ required: true, message: t('form.required') }]}
         >
           <Input className="mono" placeholder="1m0s" style={{ maxWidth: 180 }} />
+        </Form.Item>
+
+        <Form.Item
+          name="idleTimeout"
+          label={t('form.idleTimeout')}
+          extra={t('form.idleTimeoutHint')}
+        >
+          <Input className="mono" placeholder="10m" style={{ maxWidth: 180 }} />
         </Form.Item>
 
         <Form.Item

@@ -307,7 +307,7 @@ func (a *API) requireConnection(c *gin.Context) (*upstream.Conn, bool) {
 	}
 
 	conn, running := a.opts.Upstreams.Get(name)
-	if !running || !conn.Status().Connected() {
+	if !running || !conn.Status().Available() {
 		fail(c, Unavailable(fmt.Sprintf(
 			"%q is not connected; connect it before listing or calling what it offers", name)))
 		return nil, false

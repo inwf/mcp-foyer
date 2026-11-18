@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons';
 import { endpoints } from '@/api/endpoints';
 import { keys } from '@/api/query';
-import type { Resource, ServerView, Tool } from '@/api/types';
+import { serverAvailable, type Resource, type ServerView, type Tool } from '@/api/types';
 import { useServerActions } from '@/hooks/use-server-actions';
 import { useExposure } from '@/hooks/use-exposure';
 import { DisableToolButton } from '@/components/DisableToolButton';
@@ -69,6 +69,7 @@ function OverviewTab({ server }: { server: ServerView }) {
         <div className={styles.facts}>
           <Fact label={t('form.transport')} value={config.transport} />
           <Fact label={t('form.timeout')} value={config.timeout} />
+          {config.idleTimeout && <Fact label={t('form.idleTimeout')} value={config.idleTimeout} />}
           <Fact
             label={config.url ? t('form.url') : t('form.command')}
             value={endpointOf(config)}
@@ -142,7 +143,7 @@ function ToolsTab({ server }: { server: ServerView }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [calling, setCalling] = useState<Tool | null>(null);
 
-  const connected = server.status.state === 'connected';
+  const connected = serverAvailable(server.status.state);
 
   const tools = useQuery({
     queryKey: keys.servers.tools(server.name),
@@ -252,7 +253,7 @@ function ToolsTab({ server }: { server: ServerView }) {
 
 function ResourcesTab({ server }: { server: ServerView }) {
   const { t } = useTranslation();
-  const connected = server.status.state === 'connected';
+  const connected = serverAvailable(server.status.state);
 
   const resources = useQuery({
     queryKey: keys.servers.resources(server.name),
@@ -338,7 +339,7 @@ export default function ServerDetail() {
   }
 
   const view = server.data;
-  const live = view.status.state === 'connected';
+  const live = serverAvailable(view.status.state);
 
   return (
     <div className={styles.page}>

@@ -382,7 +382,7 @@ func ServerNamedIn(query string, ups Upstreams) string {
 	named := ""
 	for _, word := range strings.Fields(query) {
 		for _, status := range statuses {
-			if !status.Connected() || !namesServer(word, status.Name) {
+			if !status.Available() || !namesServer(word, status.Name) {
 				continue
 			}
 			if named != "" && named != status.Name {
@@ -629,7 +629,7 @@ func unavailableServers(ups Upstreams) ([]serverState, int) {
 	var out []serverState
 	more := 0
 	for _, status := range ups.Statuses() {
-		if status.Connected() {
+		if status.Available() {
 			continue
 		}
 		if len(out) == unavailableShown {
@@ -652,7 +652,7 @@ func requireServer(ups Upstreams, server string) error {
 		if status.Name != server {
 			continue
 		}
-		if !status.Connected() {
+		if !status.Available() {
 			// The state says the tools are out of reach; the recorded error
 			// says why, which is what a caller can relay to a person who
 			// could fix it.

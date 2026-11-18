@@ -35,6 +35,7 @@ export const zh = {
 
   state: {
     connected: '已连接',
+    sleeping: '已休眠',
     connecting: '连接中',
     disconnected: '未连接',
     failed: '连接失败',
@@ -167,6 +168,8 @@ export const zh = {
     proxy: '代理',
     timeout: '超时',
     timeoutHint: '如 30s、2m',
+    idleTimeout: '空闲回收时间',
+    idleTimeoutHint: '例如 10m。留空或填写 0s 表示保持连接。',
     description: '描述',
     descriptionHint: '会提供给模型，帮助它选择正确的服务器',
     exposedTools: '暴露的工具',

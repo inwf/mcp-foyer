@@ -334,6 +334,7 @@ func validateServer(v *validator, field string, s MCPServer) {
 	}
 
 	v.positiveDuration(field+".timeout", s.Timeout)
+	v.nonNegativeDuration(field+".idleTimeout", s.IdleTimeout)
 	validateReadiness(v, field, s, spawns)
 }
 

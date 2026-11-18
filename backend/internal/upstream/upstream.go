@@ -29,6 +29,8 @@ type Conn struct {
 	name    string
 	version string
 	deps    Deps
+	// Serializes opening and closing a session, including idle wakeups.
+	transition chan struct{}
 
 	mu        sync.RWMutex
 	cfg       config.MCPServer
@@ -38,6 +40,8 @@ type Conn struct {
 	status    Status
 	tools     []*mcp.Tool
 	resources []*mcp.Resource
+	idle      *time.Timer
+	active    int
 
 	// lifetime is cancelled by Close. Work started in response to an
 	// upstream notification runs under it, so nothing outlives the
@@ -49,10 +53,11 @@ type Conn struct {
 // New returns a connection that has not been established yet.
 func New(name string, cfg config.MCPServer, version string, deps Deps) *Conn {
 	return &Conn{
-		name:    name,
-		version: version,
-		deps:    deps,
-		cfg:     cfg,
+		name:       name,
+		version:    version,
+		deps:       deps,
+		cfg:        cfg,
+		transition: make(chan struct{}, 1),
 		status: Status{
 			Name:      name,
 			State:     StateDisconnected,
@@ -91,13 +96,25 @@ func (c *Conn) Resources() []*mcp.Resource {
 // The passed context bounds the connection attempt only; the resulting
 // session outlives it and is torn down by [Conn.Close].
 func (c *Conn) Connect(ctx context.Context) error {
+	select {
+	case c.transition <- struct{}{}:
+		defer func() { <-c.transition }()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return c.connect(ctx)
+}
+
+func (c *Conn) connect(ctx context.Context) error {
 	c.mu.Lock()
 	if c.session != nil {
 		c.mu.Unlock()
 		return nil // already connected; connecting twice is a no-op
 	}
 	cfg := c.cfg
-	c.setStateLocked(StateConnecting, nil)
+	if c.status.State != StateSleeping {
+		c.setStateLocked(StateConnecting, nil)
+	}
 	c.mu.Unlock()
 	c.deps.notify(c.name, ChangeStatus)
 
@@ -119,6 +136,12 @@ func (c *Conn) Connect(ctx context.Context) error {
 	init := session.InitializeResult()
 	c.applyHandshakeLocked(init, cmd)
 	caps := capabilities(init)
+	if !caps.tools {
+		c.tools, c.status.ToolCount = nil, 0
+	}
+	if !caps.resources {
+		c.resources, c.status.ResourceCount = nil, 0
+	}
 	c.mu.Unlock()
 
 	// Only ask for what the server said it has. Requesting a method a
@@ -143,6 +166,8 @@ func (c *Conn) Connect(ctx context.Context) error {
 
 	c.mu.Lock()
 	c.setStateLocked(StateConnected, nil)
+	c.scheduleIdleLocked()
+	status := c.status
 	c.mu.Unlock()
 	c.deps.notify(c.name, ChangeStatus)
 
@@ -150,8 +175,8 @@ func (c *Conn) Connect(ctx context.Context) error {
 
 	c.deps.logger().Info("connected",
 		"transport", cfg.Transport,
-		"serverName", c.status.ServerName,
-		"serverVersion", c.status.ServerVersion,
+		"serverName", status.ServerName,
+		"serverVersion", status.ServerVersion,
 		"tools", len(c.Tools()),
 		"resources", len(c.Resources()))
 	return nil
@@ -175,6 +200,10 @@ func (c *Conn) watchSession(session *mcp.ClientSession) {
 			return
 		}
 		c.session = nil
+		c.stopIdleLocked()
+		c.active = 0
+		c.endLife()
+		c.status.PID, c.status.StartedAt = 0, time.Time{}
 		c.tools, c.resources = nil, nil
 		if err == nil {
 			err = errors.New("the server closed the connection")
@@ -195,11 +224,24 @@ func (c *Conn) watchSession(session *mcp.ClientSession) {
 // what it was asked to, and a user disconnecting a server should not be
 // told it failed because the server was untidy on the way out.
 func (c *Conn) Close() error {
+	c.transition <- struct{}{}
+	defer func() { <-c.transition }()
+	c.closeSession(StateDisconnected)
+	return nil
+}
+
+func (c *Conn) closeSession(state State) {
 	c.mu.Lock()
 	session, endLife, stderr := c.session, c.endLife, c.stderr
+	c.stopIdleLocked()
 	c.session, c.endLife, c.cmd, c.stderr = nil, nil, nil, nil
-	c.tools, c.resources = nil, nil
-	c.setStateLocked(StateDisconnected, nil)
+	c.lifetime = nil
+	c.active = 0
+	if state != StateSleeping {
+		c.tools, c.resources = nil, nil
+	}
+	c.status.PID, c.status.StartedAt = 0, time.Time{}
+	c.setStateLocked(state, nil)
 	c.mu.Unlock()
 
 	if endLife != nil {
@@ -215,22 +257,76 @@ func (c *Conn) Close() error {
 		stderr.Flush()
 	}
 
-	if session != nil {
-		c.deps.notify(c.name, ChangeStatus)
+	c.deps.notify(c.name, ChangeStatus)
+}
+
+func (c *Conn) stopIdleLocked() {
+	if c.idle != nil {
+		c.idle.Stop()
+		c.idle = nil
 	}
-	return nil
+}
+
+func (c *Conn) scheduleIdleLocked() {
+	c.stopIdleLocked()
+	if c.cfg.IdleTimeout <= 0 || c.active != 0 || !c.status.Connected() {
+		return
+	}
+	var timer *time.Timer
+	timer = time.AfterFunc(c.cfg.IdleTimeout, func() {
+		c.transition <- struct{}{}
+		defer func() { <-c.transition }()
+		c.mu.RLock()
+		sleep := c.idle == timer && c.status.Connected() && c.active == 0
+		c.mu.RUnlock()
+		if sleep {
+			c.closeSession(StateSleeping)
+		}
+	})
+	c.idle = timer
+}
+
+func (c *Conn) acquire(ctx context.Context) (*mcp.ClientSession, func(), error) {
+	select {
+	case c.transition <- struct{}{}:
+		defer func() { <-c.transition }()
+	case <-ctx.Done():
+		return nil, nil, ctx.Err()
+	}
+	if c.Status().State == StateSleeping {
+		if err := c.connect(ctx); err != nil {
+			return nil, nil, err
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	session := c.session
+	if session == nil {
+		return nil, nil, fmt.Errorf("%s: %w", c.name, ErrNotConnected)
+	}
+	c.stopIdleLocked()
+	c.active++
+	return session, func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if session == c.session {
+			c.active--
+			c.scheduleIdleLocked()
+		}
+	}, nil
 }
 
 // CallTool invokes a tool on the server, bounded by the server's
 // configured timeout.
 func (c *Conn) CallTool(ctx context.Context, tool string, args any) (*mcp.CallToolResult, error) {
-	session, timeout, err := c.sessionAndTimeout()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout())
+	defer cancel()
+	session, release, err := c.acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	defer release()
 
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: tool, Arguments: args})
 	if err != nil {
@@ -241,13 +337,14 @@ func (c *Conn) CallTool(ctx context.Context, tool string, args any) (*mcp.CallTo
 
 // ReadResource fetches a resource from the server.
 func (c *Conn) ReadResource(ctx context.Context, uri string) (*mcp.ReadResourceResult, error) {
-	session, timeout, err := c.sessionAndTimeout()
+	ctx, cancel := context.WithTimeout(ctx, c.timeout())
+	defer cancel()
+	session, release, err := c.acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	defer release()
 
 	result, err := session.ReadResource(ctx, &mcp.ReadResourceParams{URI: uri})
 	if err != nil {
@@ -276,6 +373,10 @@ func (c *Conn) RefreshTools(ctx context.Context) error {
 	}
 
 	c.mu.Lock()
+	if session != c.session {
+		c.mu.Unlock()
+		return ErrNotConnected
+	}
 	c.tools = tools
 	c.status.ToolCount = len(tools)
 	c.status.LastCheck = c.deps.now()
@@ -305,6 +406,10 @@ func (c *Conn) RefreshResources(ctx context.Context) error {
 	}
 
 	c.mu.Lock()
+	if session != c.session {
+		c.mu.Unlock()
+		return ErrNotConnected
+	}
 	c.resources = resources
 	c.status.ResourceCount = len(resources)
 	c.status.LastCheck = c.deps.now()
@@ -321,11 +426,14 @@ func (c *Conn) sessionAndTimeout() (*mcp.ClientSession, time.Duration, error) {
 	if c.session == nil {
 		return nil, 0, fmt.Errorf("%s: %w", c.name, ErrNotConnected)
 	}
-	timeout := c.cfg.Timeout
-	if timeout <= 0 {
-		timeout = config.DefaultMCPServer().Timeout
+	return c.session, c.timeout(), nil
+}
+
+func (c *Conn) timeout() time.Duration {
+	if c.cfg.Timeout <= 0 {
+		return config.DefaultMCPServer().Timeout
 	}
-	return c.session, timeout, nil
+	return c.cfg.Timeout
 }
 
 // dial builds the transport for the configured protocol and completes
@@ -496,7 +604,7 @@ func (c *Conn) setStateLocked(state State, err error) {
 	} else {
 		c.status.Error = ""
 	}
-	if state != StateConnected {
+	if state != StateConnected && state != StateSleeping {
 		c.status.ToolCount, c.status.ResourceCount = 0, 0
 	}
 }

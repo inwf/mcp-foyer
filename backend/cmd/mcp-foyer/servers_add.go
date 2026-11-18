@@ -269,9 +269,9 @@ func reportWhenSettled(ctx context.Context, gateway *gatewayClient, stdout io.Wr
 		}
 
 		switch current.Status.State {
-		case "connected":
-			fmt.Fprintf(stdout, "connected: %d tools, %d resources\n",
-				current.Status.ToolCount, current.Status.ResourceCount)
+		case "connected", "sleeping":
+			fmt.Fprintf(stdout, "%s: %d tools, %d resources\n",
+				current.Status.State, current.Status.ToolCount, current.Status.ResourceCount)
 			return nil
 		case "failed":
 			// The server is in the configuration and will be retried, so

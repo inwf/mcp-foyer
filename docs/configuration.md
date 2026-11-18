@@ -236,9 +236,15 @@ fulfil it\nQuery: "`，文档不加。模型需要什么前缀以它自己的说
 | `env`          | stdio         | *(空)*    | 追加的环境变量。是**叠加**不是替换，子进程仍能拿到 `PATH`、`HOME` |
 | `readyPatterns`| stdio         | *(空)*    | 正则列表，匹配子进程写到 stderr 的行；命中任意一条才开始握手 |
 | `readyTimeout` | stdio         | `30s`     | 等待上面那些模式的上限。**超时不是失败**，见下  |
+| `idleTimeout` | 全部 | `0s` | 最后一次调用结束后保持连接的时长，例如 `10m`。零值表示保持常驻。 |
 | `url`          | streamable-http | —       | 服务端点，**必填**                            |
 | `headers`      | streamable-http | *(空)* | 每个请求都会带上的请求头，如 `Authorization`   |
 | `proxy`        | streamable-http | *(空)* | 走 HTTP 代理连接。不写则沿用 `HTTP_PROXY` 等环境变量 |
+
+设置空闲回收后，网关启动时连接上游并读取工具和资源目录。超过设定时间后，
+网关关闭上游会话，stdio 子进程退出，控制台显示“已休眠”。搜索、浏览和查看
+参数使用内存中的目录。调用工具或读取上游资源会重新建立会话并刷新目录。
+网关重启后会重新发现目录。需要跨调用保留进程内状态的服务器可以保持常驻。
 
 **两种传输各自需要恰好一个"地址"，写错另一个是错误而不是被忽略：** stdio 必须有
 `command` 且不能有 `url`/`proxy`；streamable-http 必须有 `url` 且不能有 `command`。
