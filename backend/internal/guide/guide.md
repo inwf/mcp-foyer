@@ -180,15 +180,15 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
   词列在 `unmatched`。`the`、`what`、`my` 这类虚词不参与匹配和计分，除非它们
   出现在工具名或服务器名里；整句都是虚词时结果为空，并把它们列进
   `unmatched`。查询要用目录所用的语言，目录可能中英混合，不确定时两种
-  语言的词都写上。`query` 里有一个词与某台已连接服务器的名字相同（忽略大小写，
+  语言的词都写上。`query` 里有一个词与某台可用服务器的名字相同（忽略大小写，
   `my-git` 和 `mygit` 算同一个名字）时，这次搜索只搜那台，返回的 `server` 是收窄
   后的名字；点到两台以上、点的那台没连上，或显式传了 `server` 时都不收窄。
 - `query` 描述工具能做什么。要处理的具体对象（仓库、人名、文件名）没有工具以它
   命名，应当写进 `call_tool` 的 `args`。查 `deepseek-harness` 只会得到空结果；
   查 `ask question about a github repository`，再把仓库名作为参数传给命中的工具。
 - `limit` 默认 **5**，范围 **1–20**。显式传 0、负数或大于 20 会报错。
-- `includeSchema` 默认 `false`；设为 `true` 时返回所选结果的完整 schema 和
-  annotations，默认数量仍为 5。准备调用通常取 1–3 个候选即可，schema 不截断。
+- 省略 `includeSchema` 时，每页前两个结果附带完整输入 schema、title 和 annotations，
+  其余结果返回摘要。设为 `true` 可展开整页，设为 `false` 可只取摘要。
 - 返回 `nextCursor` 表示还有下一页。保持 `query` 和 `server`，把它作为 `cursor`
   传回；可以改变 `limit` 和 `includeSchema`。
 
@@ -200,7 +200,7 @@ call_tool(server="files", tool="read", args={"path":"/tmp/example.txt"})
 每条命中还带 `requiredArgs`，列出该工具的必填参数名；没有必填或读不出 schema 时省略。
 跨服务器搜索会把命中摊开在多台服务器上，每台最多两条（命中只来自一台时不受限），
 想看一台的全部工具就用 `server` 浏览。
-跨服务器搜索时，未连接的服务器会列在 `unavailable` 里（名字与状态，最多五条，
+跨服务器搜索时，休眠服务器的工具仍可搜索。不可用的服务器会列在 `unavailable` 里（名字与状态，最多五条，
 其余用 `unavailableMore` 计数）；原因不重复，`list_servers` 和单台浏览都会给出，
 一切正常时该字段不出现。
 

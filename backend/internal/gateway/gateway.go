@@ -55,7 +55,7 @@ type Options struct {
 // that do, and it says the same things in the same words.
 const instructions = `This endpoint stands in front of several MCP servers. This tool list holds its four own tools plus whichever server tools the operator chose to list; most server tools are not in this list and are reached through the four.
 
-To find a capability: search_tools(query). To see what one server offers: search_tools(server); list_servers gives every server with its state and tool count. Search covers tools whether or not they are in this list. Add includeSchema=true to get each hit's input schema in the same result, or ask get_tool_details(server, tool) for one tool's schema.
+To find a capability: search_tools(query). To see what one server offers: search_tools(server); list_servers gives every server with its state and tool count. Search covers tools whether or not they are in this list. The first two hits per page include their input schemas. Add includeSchema=true for every hit's schema or false for summaries only. Use get_tool_details(server, tool) for one tool's schema.
 
 To use a tool: call_tool(server, tool, args). The arguments are checked against the tool's schema before forwarding. When server, tool and arguments are already known, call without searching first. A server tool that is in this list can also be called by its listed name.
 

@@ -132,6 +132,32 @@ func TestDiscoveryAndCallsPreserveBusinessTagsOverBothUpstreamTransports(t *test
 	}
 }
 
+func TestEachSearchPageExpandsItsFirstTwoToolsByDefault(t *testing.T) {
+	s := discoveryStack(t)
+	session := s.connect(t)
+	cursor := ""
+	for pageIndex := range 2 {
+		var page struct {
+			Hits       []struct{ InputSchema map[string]any }
+			NextCursor string
+		}
+		callDiscovery(t, session, gateway.ToolSearchTools,
+			map[string]any{"server": "stdio", "limit": 3, "cursor": cursor}, &page)
+		if len(page.Hits) != 3 {
+			t.Fatalf("page %d has %d hits", pageIndex+1, len(page.Hits))
+		}
+		for i, hit := range page.Hits {
+			if (hit.InputSchema != nil) != (i < 2) {
+				t.Fatalf("page %d hit %d has unexpected schema: %v", pageIndex+1, i+1, hit.InputSchema)
+			}
+		}
+		if pageIndex == 0 && page.NextCursor == "" {
+			t.Fatal("expected another page")
+		}
+		cursor = page.NextCursor
+	}
+}
+
 func callDiscovery(t *testing.T, session *mcp.ClientSession, tool string, args map[string]any, target any) {
 	t.Helper()
 	result, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: tool, Arguments: args})

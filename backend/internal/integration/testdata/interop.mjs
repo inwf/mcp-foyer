@@ -24,13 +24,15 @@ try {
   };
 
   const own = await call('search_tools', { server: 'mcp-foyer', includeSchema: true });
+  const mixed = await call('search_tools', { server: 'mcp-foyer' });
+  assert.deepEqual(mixed.hits.map(hit => Object.hasOwn(hit, 'inputSchema')), [true, true, false, false]);
   assert.deepEqual(own.hits.map(hit => hit.tool).sort(), systemNames);
   for (const hit of own.hits) {
     assert.deepEqual(hit.inputSchema, listed.tools.find(tool => tool.name === hit.tool).inputSchema);
   }
 
   for (const server of ['stdio', 'http']) {
-    const summary = await call('search_tools', { server, query: 'metadata' });
+    const summary = await call('search_tools', { server, query: 'metadata', includeSchema: false });
     assert.equal(summary.hits.length, 2);
     assert.ok(summary.hits.every(hit => !Object.hasOwn(hit, 'inputSchema')));
 

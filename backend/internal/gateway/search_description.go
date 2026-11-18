@@ -13,8 +13,8 @@ import (
 const searchInstructions = "Find tools on the servers behind this endpoint by describing the capability, or browse one server by giving " +
 	"server alone. Most tools are not in this tool list and are only reachable this way; every hit can then be called " +
 	"with call_tool(server, tool, args). Results are ranked best first, five per page by default, each hit naming " +
-	"the arguments the tool requires; includeSchema=true returns each hit's complete input schema so the call can " +
-	"be prepared from the same result. " +
+	"the arguments the tool requires. The first two hits on each page include their complete input schemas. " +
+	"Set includeSchema=true for all schemas on the page or false for summaries only. " +
 	"The query describes what a tool does; the particular thing to act on — a repository, a person, a file name — " +
 	"goes into call_tool's arguments, since no tool is named after it. " +
 	"Words that matched nothing are reported in unmatched; words too common to tell tools apart " +

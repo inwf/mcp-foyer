@@ -117,7 +117,7 @@ type searchToolsInput struct {
 	Query         string `json:"query,omitempty" jsonschema:"words describing the capability, matched against tool and server names and descriptions and parameter names, in any spelling (readFile finds read_file); a word matching one server's name searches that server alone; rarer words weigh more and a word matching nothing is ignored, not fatal. The directory may mix languages, so when unsure give the words in both. Supply query or server"`
 	Server        string `json:"server,omitempty" jsonschema:"exact server name to search within, or to browse when query is omitted; mcp-foyer for this endpoint's own tools"`
 	Limit         *int   `json:"limit,omitempty" jsonschema:"maximum number of results, from 1 to 20; default 5"`
-	IncludeSchema bool   `json:"includeSchema,omitempty" jsonschema:"also return each hit's complete input schema and annotations, so a call can be prepared from this one result; default false. Combine with a limit of 1 to 3"`
+	IncludeSchema *bool  `json:"includeSchema,omitempty" jsonschema:"omit to include the complete input schema and annotations of the first two hits per page; true includes them for every hit and false returns summaries only"`
 	Cursor        string `json:"cursor,omitempty" jsonschema:"nextCursor from the previous result, with the same query and server, to get the next page"`
 }
 
@@ -172,6 +172,7 @@ type serverState struct {
 
 const (
 	defaultSearchLimit = 5
+	defaultSchemaHits  = 2
 	maxSearchLimit     = 20
 )
 
@@ -418,7 +419,7 @@ func searchTools(ctx context.Context, ups Upstreams, cfgs Configs, sem Semantics
 	if in.Server == Name {
 		candidates = searchableOwn(all[Name])
 	} else {
-		candidates = Searchables(ups, cfgs, in.Server)
+		candidates = searchableTools(ups, cfg, all, in.Server)
 	}
 
 	// byOrigin is what includeSchema is answered from: the tool an origin
@@ -459,13 +460,20 @@ func searchTools(ctx context.Context, ups Upstreams, cfgs Configs, sem Semantics
 	if in.Server == "" {
 		out.Unavailable, out.UnavailableMore = unavailableServers(ups)
 	}
-	for _, hit := range hits[start:end] {
+	schemaHits := defaultSchemaHits
+	if in.IncludeSchema != nil {
+		schemaHits = 0
+		if *in.IncludeSchema {
+			schemaHits = end - start
+		}
+	}
+	for i, hit := range hits[start:end] {
 		result := searchToolHit{SearchHit: hit}
 		tool := byOrigin[Route{Server: hit.Server, Tool: hit.Tool}]
 		if tool != nil {
 			result.RequiredArgs = requiredArguments(tool.InputSchema)
 		}
-		if in.IncludeSchema {
+		if i < schemaHits {
 			detail := describeTool(hit.Server, tool, hit.Exposed)
 			result.Title = detail.Title
 			result.InputSchema = detail.InputSchema
@@ -485,7 +493,12 @@ func searchTools(ctx context.Context, ups Upstreams, cfgs Configs, sem Semantics
 // and what keeps the two from drifting apart.
 func Searchables(ups Upstreams, cfgs Configs, server string) []Searchable {
 	cfg := cfgs.Get()
-	all := UsableTools(ups.Tools(), cfg)
+	return searchableTools(ups, cfg, UsableTools(ups.Tools(), cfg), server)
+}
+
+// Rank and describe hits from the same catalog, even if an upstream
+// changes its tools while this page is being built.
+func searchableTools(ups Upstreams, cfg config.Config, all map[string][]*mcp.Tool, server string) []Searchable {
 	// Names are assigned over the complete exposed set before filtering;
 	// otherwise a collision on another server would give the wrong name.
 	names := PublishedNames(all, cfg)
